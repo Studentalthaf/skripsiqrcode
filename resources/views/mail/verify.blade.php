@@ -16,7 +16,7 @@
     </p>
     <table>
         <tr>
-            <td>Nama Lengkap</td>
+            <td>Nama Pengguna</td>
             <td>:</td>
             <td>{{ $details['nama_lengkap'] }}</td>
         </tr>
