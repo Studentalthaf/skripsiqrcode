@@ -40,7 +40,7 @@ class AuthController extends Controller
                     return redirect()->route('login')->withErrors('Akun Belum Aktif');
                 }
             } else if (Auth::user()->role === 'admin') {
-                return redirect()->route('admin')->with('success', 'Halo Admin, Anda berhasil Login');
+                return redirect()->route('admin.index')->with('success', 'Halo Admin, Anda berhasil Login');
             } else {
                 Auth::logout();
                 return redirect()->route('login')->withErrors('Akun Belum Aktif');

@@ -3,6 +3,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AdminController; // Mengimpor AdminController
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\EventController;
 
 // Rute untuk halaman depan
 Route::view('/', 'halaman_depan.index');
@@ -20,6 +21,8 @@ Route::middleware(['auth'])->group(function() {
 
     // Rute untuk halaman dashboard user, hanya bisa diakses oleh user
     Route::get('/user', [UserController::class, 'index'])->middleware('userAkses:user')->name('user.index');
+    Route::get('/user/acara',[EventController::class,'acara'])->middleware('userAkses:user')->name('user.acara');
+    Route::get('/user/acara/tambah', [EventController::class, 'tambah'])->middleware('userAkses:user')->name('user.acara.tambah');
 
     // Rute untuk logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
