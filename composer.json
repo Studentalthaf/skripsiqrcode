@@ -12,7 +12,8 @@
         "laravel/framework": "^10.10",
         "laravel/sanctum": "^3.3",
         "laravel/tinker": "^2.8",
-        "simplesoftwareio/simple-qrcode": "^4.2"
+        "simplesoftwareio/simple-qrcode": "^4.2",
+        "smakecloud/laravel-sodium": "^0.0.2"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
@@ -30,6 +31,7 @@
             "Database\\Seeders\\": "database/seeders/"
         }
     },
+    
     "autoload-dev": {
         "psr-4": {
             "Tests\\": "tests/"

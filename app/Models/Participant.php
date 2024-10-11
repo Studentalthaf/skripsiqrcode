@@ -9,23 +9,15 @@ class Participant extends Model
 {
     use HasFactory;
 
-    // Nama tabel jika berbeda dari default (optional)
-    // protected $table = 'participants';
+    protected $table = 'participants';
 
-    // Kolom yang boleh diisi secara massal (mass-assignable)
+    // Field yang dapat diisi (mass assignable)
     protected $fillable = [
-        'event_id',
-        'nama_peserta',
-        'instansi',
-        'signature',
-        'logo',
-        'serial_number',
-        'qrcode',
-        'key', // disimpan, tetapi tidak ditampilkan
-        'nonce', // disimpan, tetapi tidak ditampilkan
+        'event_id', 
+        'encrypted_data', // Data terenkripsi peserta
     ];
 
-    // Model Participant
+    // Relasi ke model Event (many-to-one)
     public function event()
     {
         return $this->belongsTo(Event::class);

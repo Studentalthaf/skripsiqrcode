@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,5 +11,6 @@ class Event extends Model
     protected $table = 'events';
 
     // Menentukan kolom yang bisa diisi secara mass-assignment
-    protected $fillable = ['user_id', 'title', 'description', 'date', 'type_event'];
+    protected $fillable = ['user_id', 'title', 'description', 'date', 'type_event', 'logo', 'signature'];  // Ganti 'logo_acara' dengan 'logo'
 }
+

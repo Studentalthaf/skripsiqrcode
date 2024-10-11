@@ -31,27 +31,38 @@ class EventController extends Controller
             'description' => 'nullable|string',
             'date' => 'required|date',
             'type_event' => 'required|string|max:255',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // Ganti 'logo_acara' menjadi 'logo'
+            'signature' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
-
-        // Pastikan user sudah login
+    
         if (Auth::check()) {
-            // Menyimpan data acara ke dalam database
             $event = new Event();
-            $event->user_id = Auth::id();  // Menggunakan ID pengguna yang sedang login
+            $event->user_id = Auth::id();
             $event->title = $request->title;
             $event->description = $request->description;
             $event->date = $request->date;
             $event->type_event = $request->type_event;
+    
+            // Proses penyimpanan logo
+            if ($request->hasFile('logo')) {  // Ganti 'logo_acara' menjadi 'logo'
+                $logoPath = $request->file('logo')->store('logos', 'public');
+                $event->logo = $logoPath;
+            }
+    
+            // Proses penyimpanan signature
+            if ($request->hasFile('signature')) {
+                $signaturePath = $request->file('signature')->store('signatures', 'public');
+                $event->signature = $signaturePath;
+            }
+    
             $event->save();
-
-            // Redirect ke halaman daftar acara setelah berhasil menyimpan
+    
             return redirect()->route('user.acara')->with('success', 'Acara berhasil ditambahkan!');
         }
-
-        // Jika user tidak login, redirect ke halaman login
+    
         return redirect()->route('login')->with('error', 'Anda harus login terlebih dahulu.');
     }
-
+    
     public function update(Request $request, $id)
     {
         // Validasi input
@@ -60,19 +71,35 @@ class EventController extends Controller
             'date' => 'required|date',
             'type_event' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',  // Ganti 'logo_acara' menjadi 'logo'
+            'signature' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
-
-        // Cari acara berdasarkan ID dan update datanya
+    
+        // Cari acara berdasarkan ID dan update
         $event = Event::findOrFail($id);
         $event->title = $request->title;
         $event->date = $request->date;
         $event->type_event = $request->type_event;
         $event->description = $request->description;
+    
+        // Proses penyimpanan logo
+        if ($request->hasFile('logo')) {  // Ganti 'logo_acara' menjadi 'logo'
+            $logoPath = $request->file('logo')->store('logos', 'public');
+            $event->logo = $logoPath;
+        }
+    
+        // Proses penyimpanan signature
+        if ($request->hasFile('signature')) {
+            $signaturePath = $request->file('signature')->store('signatures', 'public');
+            $event->signature = $signaturePath;
+        }
+    
         $event->save();
-
-        // Redirect ke halaman acara dengan pesan sukses
+    
         return redirect()->route('user.acara')->with('success', 'Acara berhasil diupdate!');
     }
+    
+    
 
 
     public function edit($id)

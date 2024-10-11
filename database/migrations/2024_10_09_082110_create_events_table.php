@@ -19,6 +19,8 @@ class CreateEventsTable extends Migration
             $table->string('title'); // Kolom title
             $table->text('description')->nullable(); // Kolom description, boleh null
             $table->date('date'); // Kolom date
+            $table->string('signature');
+            $table->string('logo')->nullable();
             $table->string('type_event'); // Kolom type_event
             $table->timestamps(); // Kolom created_at dan updated_at
 
