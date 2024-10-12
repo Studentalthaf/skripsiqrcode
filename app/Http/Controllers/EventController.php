@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Event;  // Mengimpor model Event
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;  // Import Auth dengan benar
+use Illuminate\Support\Facades\Storage; // Import Storage untuk penggunaan
 
 class EventController extends Controller
 {
@@ -34,7 +35,8 @@ class EventController extends Controller
             'logo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // Ganti 'logo_acara' menjadi 'logo'
             'signature' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
-    
+
+        // Cek apakah pengguna sudah login
         if (Auth::check()) {
             $event = new Event();
             $event->user_id = Auth::id();
@@ -42,27 +44,27 @@ class EventController extends Controller
             $event->description = $request->description;
             $event->date = $request->date;
             $event->type_event = $request->type_event;
-    
+
             // Proses penyimpanan logo
-            if ($request->hasFile('logo')) {  // Ganti 'logo_acara' menjadi 'logo'
+            if ($request->hasFile('logo')) {
                 $logoPath = $request->file('logo')->store('logos', 'public');
                 $event->logo = $logoPath;
             }
-    
+
             // Proses penyimpanan signature
             if ($request->hasFile('signature')) {
                 $signaturePath = $request->file('signature')->store('signatures', 'public');
                 $event->signature = $signaturePath;
             }
-    
+
             $event->save();
-    
+
             return redirect()->route('user.acara')->with('success', 'Acara berhasil ditambahkan!');
         }
-    
+
         return redirect()->route('login')->with('error', 'Anda harus login terlebih dahulu.');
     }
-    
+
     public function update(Request $request, $id)
     {
         // Validasi input
@@ -71,36 +73,41 @@ class EventController extends Controller
             'date' => 'required|date',
             'type_event' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',  // Ganti 'logo_acara' menjadi 'logo'
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'signature' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
-    
-        // Cari acara berdasarkan ID dan update
+
+        // Cari acara berdasarkan ID
         $event = Event::findOrFail($id);
         $event->title = $request->title;
         $event->date = $request->date;
         $event->type_event = $request->type_event;
         $event->description = $request->description;
-    
+
         // Proses penyimpanan logo
-        if ($request->hasFile('logo')) {  // Ganti 'logo_acara' menjadi 'logo'
+        if ($request->hasFile('logo')) {
+            // Hapus logo lama jika ada
+            if ($event->logo && Storage::exists($event->logo)) {
+                Storage::delete($event->logo);
+            }
             $logoPath = $request->file('logo')->store('logos', 'public');
             $event->logo = $logoPath;
         }
-    
+
         // Proses penyimpanan signature
         if ($request->hasFile('signature')) {
+            // Hapus signature lama jika ada
+            if ($event->signature && Storage::exists($event->signature)) {
+                Storage::delete($event->signature);
+            }
             $signaturePath = $request->file('signature')->store('signatures', 'public');
             $event->signature = $signaturePath;
         }
-    
+
         $event->save();
-    
+
         return redirect()->route('user.acara')->with('success', 'Acara berhasil diupdate!');
     }
-    
-    
-
 
     public function edit($id)
     {
@@ -115,6 +122,14 @@ class EventController extends Controller
     {
         // Mencari acara berdasarkan ID
         $event = Event::findOrFail($id);
+
+        // Hapus logo dan signature jika ada
+        if ($event->logo && Storage::exists($event->logo)) {
+            Storage::delete($event->logo);
+        }
+        if ($event->signature && Storage::exists($event->signature)) {
+            Storage::delete($event->signature);
+        }
 
         // Menghapus acara
         $event->delete();

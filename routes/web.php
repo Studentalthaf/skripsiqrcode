@@ -42,6 +42,17 @@ Route::middleware(['auth'])->group(function () {
     // Menyimpan data peserta baru
     Route::post('user/acara/{event_id}/participants/create', [ParticipantController::class, 'store'])->name('user.participant.store');
 
+    // Rute untuk mengedit peserta
+    Route::get('/user/acara/{event_id}/participants/edit/{participant_id}', [ParticipantController::class, 'edit'])->name('user.participant.edit');
+
+    // Rute untuk memperbarui peserta
+    Route::put('/user/acara/{event_id}/participants/update/{participant_id}', [ParticipantController::class, 'update'])->name('user.participant.update');
+
+
+    Route::get('user/participant/qrcode/{participant_id}', [ParticipantController::class, 'generateQRCode'])->name('user.participant.qrcode');
+    // Rute untuk menghapus peserta
+    
+    Route::delete('/user/acara/{event_id}/participants/destroy/{participant_id}', [ParticipantController::class, 'destroy'])->name('user.participant.destroy');
     // Rute untuk logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });
