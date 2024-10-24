@@ -19,7 +19,7 @@
             <ul class="nav nav-pills nav-sidebar flex-column" role="menu" data-accordion="false">
                 <!-- Add icons to the links using the .nav-icon class
                with font-awesome or any other icon font library -->
-                <li class="nav-item ">
+                <li class="nav-item">
                     <span>
                         <a href="#" class="nav-link">
                             <i class="nav-icon fas fa-tachometer-alt"></i>
@@ -29,7 +29,6 @@
                         </a>
                     </span>
                 </li>
-                </li>
                 <li class="nav-item">
                     <span>
                         <a href="{{ route('user.acara') }}" class="nav-link">
@@ -38,7 +37,22 @@
                         </a>
                     </span>
                 </li>
-                <!-- Control Sidebar -->
-                <aside class="control-sidebar control-sidebar-dark">
-                    <!-- Control sidebar content goes here -->
-                </aside>
+                <!-- Menu untuk halaman Test -->
+                <li class="nav-item">
+                    <span>
+                        <a href="{{ route('user.test') }}" class="nav-link">
+                            <i class="nav-icon fas fa-vial"></i>
+                            <p>Test</p>
+                        </a>
+                    </span>
+                </li>
+            </ul>
+        </nav>
+        <!-- /.sidebar-menu -->
+        
+        <!-- Control Sidebar -->
+        <aside class="control-sidebar control-sidebar-dark">
+            <!-- Control sidebar content goes here -->
+        </aside>
+    </div>
+</aside>

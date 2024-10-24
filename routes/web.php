@@ -6,6 +6,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\AdminController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\TestController;
 
 // Rute untuk halaman depan
 Route::view('/', 'halaman_depan.index');
@@ -48,11 +49,16 @@ Route::middleware(['auth'])->group(function () {
     // Rute untuk memperbarui peserta
     Route::put('/user/acara/{event_id}/participants/update/{participant_id}', [ParticipantController::class, 'update'])->name('user.participant.update');
 
-
-    Route::get('user/participant/qrcode/{participant_id}', [ParticipantController::class, 'generateQRCode'])->name('user.participant.qrcode');
     // Rute untuk menghapus peserta
-    
+
     Route::delete('/user/acara/{event_id}/participants/destroy/{participant_id}', [ParticipantController::class, 'destroy'])->name('user.participant.destroy');
+
+    Route::get('/user/test', [TestController::class, 'index'])->name('user.test');
+
+    Route::get('/user/acara/{event_id}/participant/{participant_id}', [ParticipantController::class, 'show'])->name('user.participant.show');
+
+    Route::get('/participant/{event_id}/{participant_id}/qrcode', [ParticipantController::class, 'generateQRCode'])->name('user.participant.qrcode');
+    
     // Rute untuk logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });

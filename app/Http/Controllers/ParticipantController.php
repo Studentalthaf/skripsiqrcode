@@ -6,10 +6,9 @@ use Illuminate\Http\Request;
 use App\Models\Participant;
 use App\Models\Event;
 use Illuminate\Support\Facades\Log;
-
+use Sodium;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
-
 
 class ParticipantController extends Controller
 {
@@ -17,27 +16,61 @@ class ParticipantController extends Controller
     {
         // Ambil semua peserta berdasarkan event_id
         $participants = Participant::where('event_id', $event_id)->get();
-
+    
         // Ambil kunci enkripsi dari event
         $event = Event::findOrFail($event_id);
         $encryptionKey = $this->getEncryptionKey($event->encryption_key);
-
+        $user = auth()->user();
         // Dekripsi data peserta jika diperlukan
         foreach ($participants as $participant) {
             $decryptedData = $this->decryptData($participant->encrypted_data, $encryptionKey);
             $participant->decrypted_name = $decryptedData['name'];
             $participant->decrypted_email = $decryptedData['email'];
-            $participant->decrypted_phone = $decryptedData['phone'];
-            // Menyimpan logo dan signature dari event
-            $participant->decrypted_logo = $event->logo; // Menggunakan logo dari event
-            $participant->decrypted_signature = $event->signature; // Menggunakan signature dari event
-        }
+            $participant->decrypted_phone = $decryptedData['phone']; 
+            $participant->decrypted_logo = $event->logo; 
+            $participant->decrypted_signature = $event->signature; 
+            $participant->decrypted_nama_lengkap = $user->nama_lengkap;
+            $participant->decrypted_date = $event->date;
+            $participant->decrypted_title = $event->title;
+            
 
+        }
+    
         return view('pointakses.user.page.participant_index', compact('participants', 'event_id'));
     }
 
+    public function show($event_id, $participant_id)
+    {
+        // Ambil peserta berdasarkan ID
+        $participant = Participant::findOrFail($participant_id);
+    
+        // Ambil data event terkait dengan peserta
+        $event = Event::findOrFail($event_id);
 
-    // Menampilkan form untuk menambah peserta pada event tertentu
+        $user = auth()->user();
+    
+        // Ambil kunci enkripsi
+        $encryptionKey = $this->getEncryptionKey($event->encryption_key);
+    
+        // Dekripsi data peserta
+        $decryptedData = $this->decryptData($participant->encrypted_data, $encryptionKey);
+    
+        // Menyimpan informasi yang didekripsi ke dalam peserta
+        $participant->decrypted_name = $decryptedData['name'];
+        $participant->decrypted_email = $decryptedData['email'];
+        $participant->decrypted_phone = $decryptedData['phone'];
+ 
+        $participant->decrypted_logo = $event->logo; 
+        $participant->decrypted_signature = $event->signature; 
+        $participant->decrypted_nama_lengkap = $user->nama_lengkap;
+        $participant->decrypted_date = $event->date;
+        $participant->decrypted_title = $event->title;
+        
+    
+        return view('pointakses.user.page.participant_show', compact('participant', 'event'));
+    }
+
+
     public function create($event_id)
     {
         $event = Event::findOrFail($event_id);
@@ -52,11 +85,15 @@ class ParticipantController extends Controller
                 'nama_peserta' => 'required|string|max:255',
                 'email' => 'required|email|max:255',
                 'telepon' => 'required|string|max:15',
+               
             ]);
-
+    
             // Ambil data event berdasarkan ID
             $event = Event::findOrFail($event_id);
-
+    
+            // Ambil nama lengkap pengguna yang terautentikasi
+            $user = auth()->user();
+    
             // Data peserta termasuk path tanda tangan dan logo dari event
             $participantData = [
                 'name' => $request->nama_peserta,
@@ -64,27 +101,28 @@ class ParticipantController extends Controller
                 'phone' => $request->telepon,
                 'tanda_tangan' => $event->signature,
                 'logo' => $event->logo,
+                'nama_lengkap' => $user->nama_lengkap,
+                'date' => $event->date,
+                'title' => $event->title,
+                
             ];
-
-            // Enkripsi data peserta jika diperlukan
+    
+            // Enkripsi data peserta menggunakan ChaCha20-Poly1305
             $encryptionKey = $this->getEncryptionKey($event->encryption_key);
             $encryptedData = $this->encryptData($participantData, $encryptionKey);
-
+    
             // Simpan data peserta
             $participant = new Participant();
             $participant->event_id = $event_id;
             $participant->encrypted_data = $encryptedData;
             $participant->save();
-
+    
             return redirect()->route('user.participant.index', ['event_id' => $event_id])
                 ->with('success', 'Peserta berhasil ditambahkan!');
         } catch (\Exception $e) {
-            // Jika logging tidak diinginkan, hapus baris ini
             return redirect()->back()->with('error', 'Terjadi kesalahan saat menyimpan data peserta: ' . $e->getMessage());
         }
     }
-
-
     // Fungsi untuk mendapatkan kunci enkripsi
     private function getEncryptionKey($encryptionKeyFromEvent)
     {
@@ -92,12 +130,12 @@ class ParticipantController extends Controller
         if (empty($encryptionKeyFromEvent)) {
             $encryptionKeyFromEvent = hex2bin(env('CHACHA20_SECRET_KEY'));
 
-            if (strlen($encryptionKeyFromEvent) !== SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {
+            if (strlen($encryptionKeyFromEvent) !== 32) {
                 throw new \Exception('Panjang kunci enkripsi dari .env tidak sesuai.');
             }
         } else {
             $encryptionKeyFromEvent = hex2bin($encryptionKeyFromEvent);
-            if (strlen($encryptionKeyFromEvent) !== SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {
+            if (strlen($encryptionKeyFromEvent) !== 32) {
                 throw new \Exception('Panjang kunci enkripsi dari event tidak sesuai.');
             }
         }
@@ -105,34 +143,48 @@ class ParticipantController extends Controller
         return $encryptionKeyFromEvent;
     }
 
-    // Fungsi untuk mengenkripsi data
+    // Fungsi untuk mengenkripsi data menggunakan ChaCha20-Poly1305
     private function encryptData($data, $key)
     {
-        if (strlen($key) !== SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {
+        if (strlen($key) !== 32) { 
             throw new \Exception('Panjang kunci enkripsi tidak sesuai.');
         }
 
-        $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES); // Nonce untuk enkripsi
-        $ciphertext = sodium_crypto_secretbox(json_encode($data), $nonce, $key); // Enkripsi data
+        // Membuat nonce
+        $nonce = random_bytes(SODIUM_CRYPTO_AEAD_CHACHA20POLY1305_NPUBBYTES); // 12 bytes untuk ChaCha20
 
-        return base64_encode($nonce . $ciphertext); // Gabungkan nonce dan ciphertext lalu encode ke base64
+        // Enkripsi data
+        $ciphertext = sodium_crypto_aead_chacha20poly1305_encrypt(
+            json_encode($data),
+            '', 
+            $nonce,
+            $key
+        );
+
+        // lalu encode ke base64
+        return base64_encode($nonce . $ciphertext);
     }
 
-    // Fungsi untuk mendekripsi data
+
     private function decryptData($encryptedData, $key)
     {
-        if (strlen($key) !== SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {
+        if (strlen($key) !== 32) { 
             throw new \Exception('Panjang kunci enkripsi tidak sesuai.');
         }
 
         $decodedData = base64_decode($encryptedData);
 
         // Ambil nonce dan ciphertext dari data yang sudah didekode
-        $nonce = mb_substr($decodedData, 0, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES, '8bit');
-        $ciphertext = mb_substr($decodedData, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES, null, '8bit');
+        $nonce = mb_substr($decodedData, 0, SODIUM_CRYPTO_AEAD_CHACHA20POLY1305_NPUBBYTES, '8bit');
+        $ciphertext = mb_substr($decodedData, SODIUM_CRYPTO_AEAD_CHACHA20POLY1305_NPUBBYTES, null, '8bit');
 
         // Dekripsi data
-        $decrypted = sodium_crypto_secretbox_open($ciphertext, $nonce, $key);
+        $decrypted = sodium_crypto_aead_chacha20poly1305_decrypt(
+            $ciphertext,
+            '', // Tidak ada additional data
+            $nonce,
+            $key
+        );
 
         if ($decrypted === false) {
             throw new \Exception("Dekripsi gagal.");
@@ -140,6 +192,7 @@ class ParticipantController extends Controller
 
         return json_decode($decrypted, true);
     }
+
     public function edit($event_id, $participant_id)
     {
         $event = Event::findOrFail($event_id);
@@ -160,6 +213,7 @@ class ParticipantController extends Controller
                 'nama_peserta' => 'required|string|max:255',
                 'email' => 'required|email|max:255',
                 'telepon' => 'required|string|max:15',
+                'nomer_seri' => 'required|string|max:255',
             ]);
 
             // Ambil peserta
@@ -170,6 +224,7 @@ class ParticipantController extends Controller
                 'name' => $request->nama_peserta,
                 'email' => $request->email,
                 'phone' => $request->telepon,
+                'nomer_seri' => $request->nomer_seri,
             ];
 
             // Ambil kunci enkripsi dari event
@@ -187,71 +242,41 @@ class ParticipantController extends Controller
                 ->with('success', 'Peserta berhasil diperbarui!');
         } catch (\Exception $e) {
             // Log error dan tampilkan pesan
-            \Log::error($e->getMessage());
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat memperbarui data peserta.');
+            Log::error("Peserta gagal diperbarui: " . $e->getMessage());
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat memperbarui peserta: ' . $e->getMessage());
         }
     }
 
     public function destroy($event_id, $participant_id)
     {
-        try {
-            // Hapus peserta dari database
-            $participant = Participant::findOrFail($participant_id);
-            $participant->delete();
-
-            return redirect()->route('user.participant.index', ['event_id' => $event_id])
-                ->with('success', 'Peserta berhasil dihapus!');
-        } catch (\Exception $e) {
-            // Log error dan tampilkan pesan
-            \Log::error($e->getMessage());
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat menghapus data peserta.');
-        }
-    }
-    public function generateQRCode($participant_id)
-    {
-        // Ambil data peserta berdasarkan ID
+        // Hapus peserta berdasarkan ID
         $participant = Participant::findOrFail($participant_id);
-        
-        // Ambil data terenkripsi yang sudah ada
-        $encryptedData = $participant->encrypted_data; // Mengambil data terenkripsi dari peserta
-        
-        // Membuat QR Code dari data terenkripsi
-        $qrCode = QrCode::create($encryptedData)
+        $participant->delete();
+
+        return redirect()->route('user.participant.index', ['event_id' => $event_id])
+            ->with('success', 'Peserta berhasil dihapus!');
+    }
+    public function generateQRCode($event_id, $participant_id)
+    {
+        $participant = Participant::findOrFail($participant_id);
+
+        // Mengambil URL atau data yang ingin dimasukkan ke dalam QR Code
+        $url = route('user.participant.show', ['event_id' => $event_id, 'participant_id' => $participant->id]);
+
+        // Membuat QR Code
+        $qrCode = QrCode::create($url)
             ->setSize(300)
             ->setMargin(10);
-    
-        // Menghasilkan gambar QR Code
+
+        // Menggunakan PngWriter untuk menulis QR Code ke dalam file
         $writer = new PngWriter();
         $result = $writer->write($qrCode);
-    
-        // Tentukan nama file untuk QR Code
-        $fileName = 'qr_codes/qr_code_' . $participant_id . '.png';
-        
-        // Tentukan path lengkap untuk menyimpan QR Code
-        $filePath = storage_path('app/public/' . $fileName);
-    
-        // Pastikan folder qr_codes ada
-        $qrCodeDir = dirname($filePath);
-        if (!file_exists($qrCodeDir)) {
-            mkdir($qrCodeDir, 0755, true); // Buat folder jika belum ada
-        }
-        
-        // Simpan QR Code ke storage
-        file_put_contents($filePath, $result->getString());
-        
-        // Update kolom qrcode_participant di database
-        $participant->qrcode_participant = $fileName;
-        $participant->save();
-        
-        // Mengembalikan response
-        return response($result->getString(), 200)
-            ->header('Content-Type', 'image/png');
+
+        // Menyimpan gambar QR Code ke file di storage
+        $filePath = 'qrcodes/qrcode.png'; 
+        $result->saveToFile(storage_path('app/public/' . $filePath)); // Simpan QR Code ke file di storage
+
+        // Mengembalikan respon jika diperlukan
+        return response()->download(storage_path('app/public/' . $filePath))->deleteFileAfterSend(true);
     }
-    
-    
-    
-    
-    
-    
 }
- 

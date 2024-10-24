@@ -96,7 +96,7 @@ class EventController extends Controller
 
         // Proses penyimpanan signature
         if ($request->hasFile('signature')) {
-            // Hapus signature lama jika ada
+            
             if ($event->signature && Storage::exists($event->signature)) {
                 Storage::delete($event->signature);
             }
@@ -131,7 +131,6 @@ class EventController extends Controller
             Storage::delete($event->signature);
         }
 
-        // Menghapus acara
         $event->delete();
 
         // Redirect kembali ke halaman acara dengan pesan sukses
