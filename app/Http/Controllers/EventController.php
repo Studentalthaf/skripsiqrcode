@@ -15,7 +15,7 @@ class EventController extends Controller
         $events = Event::all();
 
         // Mengirim data acara ke tampilan
-        return view('pointakses.user.page.page_acara', compact('events'));
+        return view('pointakses.admin.page.page_acara', compact('events'));
     }
 
     public function tambah()

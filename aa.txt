@@ -1,0 +1,20 @@
+START encryptData(data, key, ad)
+   // Validasi panjang key harus 32 byte
+   IF (strlen(key) !== 32) THEN
+      THROW Exception('Panjang kunci enkripsi tidak sesuai.')
+   ENDIF
+
+   // Generate nonce sepanjang 12 byte
+   nonce = random_bytes(SODIUM_CRYPTO_AEAD_CHACHA20POLY1305_NPUBBYTES)
+
+   // Enkripsi data menggunakan ChaCha20-Poly1305
+   ciphertext = sodium_crypto_aead_chacha20poly1305_encrypt(
+       json_encode(data),  // Data diubah ke JSON string
+       ad,                 // AD digunakan untuk autentikasi integritas, tidak dienkripsi
+       nonce,              // Nonce unik untuk setiap operasi enkripsi
+       key                 // Kunci enkripsi sepanjang 32 byte
+   )
+
+   // Gabungkan nonce dan ciphertext, lalu encode ke base64
+   RETURN base64_encode(nonce . ciphertext)
+END encryptData

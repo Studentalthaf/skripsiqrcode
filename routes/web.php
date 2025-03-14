@@ -7,6 +7,7 @@ use App\Http\Controllers\AdminController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\TestController;
+use App\Http\Controllers\DecryptionController;
 
 // Rute untuk halaman depan
 Route::view('/', 'halaman_depan.index');
@@ -16,17 +17,21 @@ Route::get('/login', [AuthController::class, 'index'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/reg', [AuthController::class, 'create'])->name('registrasi');
 Route::post('/reg', [AuthController::class, 'register']);
-Route::get('/verify/{verify_key}', [AuthController::class, 'verify']);
 
 Route::middleware(['auth'])->group(function () {
 
     // Rute untuk halaman dashboard admin
     Route::get('/admin', [AdminController::class, 'index'])->middleware('userAkses:admin')->name('admin.index');
+    Route::get('/admin/event', [AdminController::class, 'event'])->middleware('userAkses:admin')->name('admin.event');
+    Route::get('/admin/event/create', [AdminController::class, 'create_event'])->middleware('userAkses:admin')->name('admin.create.event');
+    Route::post('/admin/event/store', [AdminController::class, 'store'])->middleware('userAkses:admin')->name('admin.event.store');
+    Route::get('/admin/event/delete/{id}', [AdminController::class, 'delete_event'])->middleware('userAkses:admin')->name('admin.event.delete');
+    Route::get('/admin/event/edit/{id}', [AdminController::class, 'edit_event'])->middleware('userAkses:admin')->name('admin.event.edit');
+    Route::put('/admin/event/update/{id}', [AdminController::class, 'update'])->middleware('userAkses:admin')->name('admin.event.update');
+    Route::get('/admin/users', [AdminController::class, 'users'])->middleware('userAkses:admin')->name('admin.users');
 
     // Rute untuk halaman dashboard user
     Route::get('/user', [UserController::class, 'index'])->middleware('userAkses:user')->name('user.index');
-
-    // Rute untuk acara
     Route::get('/user/acara', [EventController::class, 'acara'])->middleware('userAkses:user')->name('user.acara');
     Route::get('/user/acara/tambah', [EventController::class, 'tambah'])->middleware('userAkses:user')->name('user.acara.tambah');
     Route::get('/user/acara/hapus/{id}', [EventController::class, 'hapus'])->middleware('userAkses:user')->name('user.acara.hapus');
@@ -61,4 +66,9 @@ Route::middleware(['auth'])->group(function () {
     
     // Rute untuk logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+  
+
+    Route::post('/decrypt-qr', [DecryptionController::class, 'decryptQr']);
+    
 });

@@ -17,9 +17,9 @@
                         <!-- small box -->
                         <div class="small-box bg-info">
                             <div class="inner">
-                                <h3>#</h3>
 
-                                <p>ADMIN</p>
+
+                                <p>Vendor</p>
                             </div>
                             <div class="icon">
                                 <i class="icon-users5"></i>
@@ -79,11 +79,7 @@
                 </div>
             </div>
 
-            <div class="container px-4 mx-auto">
 
-
-
-            </div>
         </section>
 
         @include('pointakses.admin.include.sidebar_admin')

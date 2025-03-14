@@ -9,90 +9,54 @@
     <div class="sidebar">
         <!-- Sidebar user panel (optional) -->
         <div class="user-panel mt-3 pb-3 mb-3 d-flex">
-            <div class="image">
-                <img src="{{ asset('frontend/images/favicon.png') }}" class="img-circle elevation-2" alt="User Image">
-            </div>
             <div class="info">
-                <a href="#" class="d-block">SAM {{ Auth::user()->nama_lengkap }}</a>
+                <a href="#" class="d-block">{{ Auth::user()->nama_lengkap }}</a>
             </div>
         </div>
 
         <!-- Sidebar Menu -->
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" role="menu" data-accordion="false">
-                <!-- Add icons to the links using the .nav-icon class
-               with font-awesome or any other icon font library -->
-                <li class="nav-item ">
+                <li class="nav-item">
                     <span>
-                        <a href="#" class="nav-link">
+                        <a href="{{ url('/admin') }}" class="nav-link">
                             <i class="nav-icon fas fa-tachometer-alt"></i>
-                            <p>
-                                Dashboard
-                            </p>
+                            <p>Dashboard</p>
                         </a>
                     </span>
                 </li>
-                </li>
                 <li class="nav-item">
                     <span>
-                        <a href="#" class="nav-link">
+                        <a href="{{ route('admin.event') }}" class="nav-link">
                             <i class="nav-icon fas fa-columns"></i>
-                            <p>
-                                Kategori
-                            </p>
+                            <p>Acara</p>
                         </a>
                     </span>
                 </li>
                 <li class="nav-item">
                     <span>
-                        <a href="#" class="nav-link">
-                            <i class="nav-icon fas fa-th"></i>
-                            <p>
-                                Menu
-                            </p>
+                        <a href="{{ route('user.test') }}" class="nav-link">
+                            <i class="nav-icon fas fa-vial"></i>
+                            <p>Test</p>
                         </a>
                     </span>
                 </li>
+                <!-- Menu Baru: Data Semua User -->
                 <li class="nav-item">
                     <span>
-                        <a href="#" class="nav-link">
-                            <i class="nav-icon fas fa-table"></i>
-                            <p>
-                                Order
-                            </p>
-                        </a>
-                    </span>
-                <li class="nav-item">
-                    <span>
-                        <a href="#" class="nav-link">
-                            <i class="nav-icon fas fa-table"></i>
-                            <p>
-                                History
-                            </p>
-                        </a>
-                    </span>
-                <li class="nav-item">
-                    <span>
-                        <a href="#" class="nav-link">
-                            <i class="nav-icon far fa-plus-square"></i>
-                            <p>
-                                Seller
-                            </p>
+                        <a href="{{ route('admin.users') }}" class="nav-link">
+                            <i class="nav-icon fas fa-users"></i>
+                            <p>Data Semua User</p>
                         </a>
                     </span>
                 </li>
-                <li class="nav-item">
-                    <span>
-                        <a href="#" class="nav-link">
-                            <i class="nav-icon far fa-plus-square"></i>
-                            <p>
-                                Pengguna
-                            </p>
-                        </a>
-                    </span>
-                </li>
-
-                <!-- Control Sidebar -->
-                <aside class="control-sidebar control-sidebar-dark">
-                    <!-- Control sidebar content goes here -->
-                </aside>
+            </ul>
+        </nav>
+        <!-- /.sidebar-menu -->
+        
+        <!-- Control Sidebar -->
+        <aside class="control-sidebar control-sidebar-dark">
+            <!-- Control sidebar content goes here -->
+        </aside>
+    </div>
+</aside>

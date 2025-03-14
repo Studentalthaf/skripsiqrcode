@@ -1,4 +1,4 @@
-@extends('pointakses.user.layouts.dashboard')
+@extends('pointakses.admin.layouts.dashboard')
 
 @section('content')
 <div class="content-wrapper iframe-mode" data-widget="iframe" data-loading-screen="750">
@@ -10,7 +10,7 @@
                 </div>
                 <div class="col-sm-6">
                     <ol class="breadcrumb float-sm-right">
-                        <li class="breadcrumb-item"><a href="{{ url('/user') }}">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url('/admin') }}">Dashboard</a></li>
                         <li class="breadcrumb-item active">Acara</li>
                     </ol>
                 </div>
@@ -23,7 +23,7 @@
             <div class="card">
                 <div class="card-header d-flex flex-column align-items-start">
                     <h3 class="card-title mb-2">Daftar Acara</h3>
-                    <a href="{{ route('user.acara.tambah') }}" class="btn btn-success btn-sm">
+                    <a href="{{ route('admin.create.event') }}" class="btn btn-success btn-sm">
                         Tambah Acara
                     </a>
                 </div>
@@ -49,10 +49,10 @@
                                     <td>{{ $event->type_event }}</td>
                                     <td>{{ $event->description }}</td>
                                     <td class="text-center">
-                                        <a href="{{ route('user.acara.edit', $event->id) }}" class="btn btn-success btn-sm">
+                                        <a href="{{ route('admin.event.edit', $event->id) }}" class="btn btn-success btn-sm">
                                             <i class="fas fa-edit"></i> Edit
                                         </a>
-                                        <a href="{{ route('user.acara.hapus', $event->id) }}" class="btn btn-danger btn-sm"
+                                        <a href="{{ route('admin.event.delete', $event->id) }}" class="btn btn-danger btn-sm"
                                             onclick="return confirm('Yakin ingin menghapus acara ini?')">
                                             <i class="fas fa-trash-alt"></i> Hapus
                                         </a>
@@ -72,5 +72,5 @@
     </div>
 </div>
 
-@include('pointakses.user.include.sidebar_user')
+@include('pointakses.admin.include.sidebar_admin')
 @endsection
