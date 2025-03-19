@@ -1,4 +1,4 @@
-@extends('pointakses.user.layouts.dashboard')
+@extends('pointakses.admin.layouts.dashboard')
 
 @section('content')
 <div class="content-wrapper iframe-mode" data-widget="iframe" data-loading-screen="750">
@@ -10,7 +10,7 @@
                 </div>
                 <div class="col-sm-6">
                     <ol class="breadcrumb float-sm-right">
-                        <li class="breadcrumb-item"><a href="{{ url('/user') }}">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url('/admin') }}">Dashboard</a></li>
                         <li class="breadcrumb-item active">Acara</li>
                         <li class="breadcrumb-item active">Peserta</li>
                     </ol>
@@ -26,7 +26,7 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Daftar Peserta</h3>
                 <!-- Tombol Tambah Peserta -->
-                <a href="{{ route('user.participant.create', ['event_id' => $event_id]) }}" 
+                <a href="{{ route('admin.create.participant', ['event_id' => $event_id]) }}" 
                    class="btn btn-success btn-sm">
                     Tambah Peserta
                 </a>
@@ -70,7 +70,7 @@
                                             <i class="fas fa-eye"></i>
                                         </a>
                                         
-                                        <a href="{{ route('user.participant.edit', ['event_id' => $event_id, 'participant_id' => $participant->id]) }}" 
+                                        <a href="{{ route('admin.edit.participant', ['event_id' => $event_id, 'participant_id' => $participant->id]) }}" 
                                            class="btn btn-warning btn-sm" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
@@ -84,12 +84,11 @@
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </form>
+
                                         <a href="{{ route('user.participant.qrcode', ['event_id' => $event_id, 'participant_id' => $participant->id]) }}" 
-                                            class="btn btn-info btn-sm" title="Download QR Code" download>
-                                             <i class="fas fa-qrcode"></i> Download QR
-                                         </a>
-                                         
-                                         
+                                           class="btn btn-info btn-sm" title="QR Code">
+                                            <i class="fas fa-qrcode"></i>
+                                        </a>
                                     </td>
                                 </tr>
                             @endforeach
@@ -103,6 +102,6 @@
         </div>
         <!-- /.card -->
     </div>
-    @include('pointakses.user.include.sidebar_user')
 </div>
+@include('pointakses.admin.include.sidebar_admin')
 @endsection

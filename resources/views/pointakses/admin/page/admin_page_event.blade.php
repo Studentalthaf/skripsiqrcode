@@ -58,7 +58,7 @@
                                         </a>
                                     </td>
                                     <td class="text-center">
-                                        <a href="{{ route('user.participant.index', $event->id) }}" class="btn btn-primary btn-sm">
+                                        <a href="{{ route('admin.index.participant', $event->id) }}" class="btn btn-primary btn-sm">
                                             Data Peserta
                                         </a>
                                     </td>

@@ -1,7 +1,7 @@
 @extends('pointakses.user.layouts.dashboard')
 
 @section('content')
-<div class="content-wrapper iframe-mode" data-widget="iframe" data-loading-screen="600">
+<div class="content-wrapper">
     <div class="container">
         <h2>Tambah Peserta</h2>
 
@@ -37,8 +37,7 @@
                 <a href="{{ route('user.participant.index', ['event_id' => $event_id]) }}" class="btn btn-secondary">Kembali ke Daftar Peserta</a>
             </div>
         </form>
-
     </div>
-    @include('pointakses.user.include.sidebar_user')
 </div>
+@include('pointakses.user.include.sidebar_user')
 @endsection
