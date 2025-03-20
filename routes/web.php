@@ -35,6 +35,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('admin/event/{event_id}/participants/store', [AdminController::class, 'store_participant'])->middleware('userAkses:admin')->name('admin.store.participant'); 
     Route::get('/admin/event/{event_id}/participants/edit/{participant_id}', [AdminController::class, 'edit_participant'])->middleware('userAkses:admin')->name('admin.edit.participant');
     Route::put('/admin/event/{event_id}/participants/update/{participant_id}', [AdminController::class, 'update_participant'])->middleware('userAkses:admin')->name('admin.update.participant');
+    Route::get('/admin/event/{event_id}/participant/{participant_id}', [AdminController::class, 'show_participant'])->middleware('userAkses:admin')->name('admin.show.participant');
+    Route::delete('/admin/event/{event_id}/participants/destroy/{participant_id}', [AdminController::class, 'destroy_participant'])->middleware('userAkses:admin')->name('admin.destroy.participant');
+    Route::get('/admin/qrcode/{event_id}/{participant_id}', [AdminController::class, 'generateQrCode'])->middleware('userAkses:admin')
+    ->name('admin.create.qrcode_participant');
+
 
     // Rute untuk halaman dashboard user
     Route::get('/user', [UserController::class, 'index'])->middleware('userAkses:user')->name('user.index');
@@ -45,19 +50,19 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/user/acara/edit/{id}', [EventController::class, 'edit'])->middleware('userAkses:user')->name('user.acara.edit');
     Route::put('/user/acara/update/{id}', [EventController::class, 'update'])->middleware('userAkses:user')->name('user.acara.update');
 
-    // Route untuk peserta (participants)
-    Route::get('/user/acara/{event_id}/participants', [ParticipantController::class, 'index'])->name('user.participant.index');
+    // // Route untuk peserta (participants)
+    // Route::get('/user/acara/{event_id}/participants', [ParticipantController::class, 'index'])->middleware('userAkses:user')->name('user.participant.index');
 
-    Route::get('/user/acara/{event_id}/participants/create', [ParticipantController::class, 'create'])->name('user.participant.create'); // Menampilkan form
-    Route::post('/user/acara/{event_id}/participants', [ParticipantController::class, 'store'])->name('user.participant.store'); // Menyimpan data
+    // Route::get('/user/acara/{event_id}/participants/create', [ParticipantController::class, 'create'])->name('user.participant.create'); // Menampilkan form
+    // Route::post('/user/acara/{event_id}/participants', [ParticipantController::class, 'store'])->name('user.participant.store'); // Menyimpan data
     
-    // Rute untuk mengedit peserta
-    Route::get('/user/acara/{event_id}/participants/edit/{participant_id}', [ParticipantController::class, 'edit'])->name('user.participant.edit');
+    // // Rute untuk mengedit peserta
+    // Route::get('/user/acara/{event_id}/participants/edit/{participant_id}', [ParticipantController::class, 'edit'])->name('user.participant.edit');
 
-    // Rute untuk memperbarui peserta
-    Route::put('/user/acara/{event_id}/participants/update/{participant_id}', [ParticipantController::class, 'update'])->name('user.participant.update');
+    // // Rute untuk memperbarui peserta
+    // Route::put('/user/acara/{event_id}/participants/update/{participant_id}', [ParticipantController::class, 'update'])->name('user.participant.update');
 
-    // Rute untuk menghapus peserta
+    // // Rute untuk menghapus peserta
 
     Route::delete('/user/acara/{event_id}/participants/destroy/{participant_id}', [ParticipantController::class, 'destroy'])->name('user.participant.destroy');
 

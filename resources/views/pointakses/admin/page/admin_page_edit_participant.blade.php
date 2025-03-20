@@ -1,5 +1,6 @@
 @extends('pointakses.admin.layouts.dashboard')
 @section('content')
+<div class="content-wrapper iframe-mode" data-widget="iframe" data-loading-screen="750">
 <div class="container">
     <h2>Edit Peserta</h2>
 

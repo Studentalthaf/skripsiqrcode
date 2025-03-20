@@ -65,7 +65,7 @@
                                              style="width: 50px; height: auto;">
                                     </td>
                                     <td>
-                                        <a href="{{ route('user.participant.show', ['event_id' => $event_id, 'participant_id' => $participant->id]) }}" 
+                                        <a href="{{ route('admin.show.participant', ['event_id' => $event_id, 'participant_id' => $participant->id]) }}" 
                                            class="btn btn-primary btn-sm" title="Lihat">
                                             <i class="fas fa-eye"></i>
                                         </a>
@@ -75,7 +75,7 @@
                                             <i class="fas fa-edit"></i>
                                         </a>
 
-                                        <form action="{{ route('user.participant.destroy', ['event_id' => $event_id, 'participant_id' => $participant->id]) }}" 
+                                        <form action="{{ route('admin.destroy.participant', ['event_id' => $event_id, 'participant_id' => $participant->id]) }}" 
                                               method="POST" style="display:inline;">
                                             @csrf
                                             @method('DELETE')
@@ -85,10 +85,12 @@
                                             </button>
                                         </form>
 
-                                        <a href="{{ route('user.participant.qrcode', ['event_id' => $event_id, 'participant_id' => $participant->id]) }}" 
-                                           class="btn btn-info btn-sm" title="QR Code">
-                                            <i class="fas fa-qrcode"></i>
-                                        </a>
+                                        <a href="{{ route('admin.create.qrcode_participant', ['event_id' => $event_id, 'participant_id' => $participant->id]) }}" 
+                                            class="btn btn-info btn-sm" title="QR Code">
+                                             <i class="fas fa-qrcode"></i> Download QR
+                                         </a>
+                                         
+                                         
                                     </td>
                                 </tr>
                             @endforeach

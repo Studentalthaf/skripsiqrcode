@@ -9,6 +9,8 @@ use App\Models\Participant;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
 
 class AdminController extends Controller
 {
@@ -174,7 +176,7 @@ class AdminController extends Controller
             }
         }
 
-        return view('pointakses.user.page.participant_index', compact('participants', 'event_id'));
+        return view('pointakses.admin.page.admin_index_participant', compact('participants', 'event_id'));
     }
     public function create_participant($event_id)
     {
@@ -302,7 +304,7 @@ class AdminController extends Controller
                 'nama_peserta' => 'required|string|max:255',
                 'email' => 'required|email|max:255',
                 'telepon' => 'required|string|max:15',
-                'nomer_seri' => 'required|string|max:255',
+                
             ]);
 
             // Ambil peserta
@@ -333,6 +335,83 @@ class AdminController extends Controller
             // Log error dan tampilkan pesan
             Log::error("Peserta gagal diperbarui: " . $e->getMessage());
             return redirect()->back()->with('error', 'Terjadi kesalahan saat memperbarui peserta: ' . $e->getMessage());
+        }
+    }
+    public function show_participant($event_id, $participant_id)
+    {
+        // Ambil peserta berdasarkan ID
+        $participant = Participant::findOrFail($participant_id);
+
+        // Ambil data event terkait dengan peserta
+        $event = Event::findOrFail($event_id);
+        $user = auth()->user();
+
+        // Ambil kunci enkripsi
+        $encryptionKey = $this->getEncryptionKey($event->encryption_key);
+
+        // Dekripsi data peserta
+        $decryptedData = $this->decryptData($participant->encrypted_data, $encryptionKey);
+
+        // Menyimpan informasi yang didekripsi ke dalam peserta
+        $participant->decrypted_name = $decryptedData['name'];
+        $participant->decrypted_email = $decryptedData['email'];
+        $participant->decrypted_phone = $decryptedData['phone'];
+        $participant->decrypted_logo = $event->logo;
+        $participant->decrypted_signature = $event->signature;
+        $participant->decrypted_nama_lengkap = $user->nama_lengkap;
+        $participant->decrypted_date = $event->date;
+        $participant->decrypted_title = $event->title;
+
+        return view('pointakses.admin.page.admin_page_show_participant', compact('participant', 'event'));
+    }
+    public function destroy_participant($event_id, $participant_id)
+    {
+        // Hapus peserta berdasarkan ID
+        $participant = Participant::findOrFail($participant_id);
+        $participant->delete();
+
+        return redirect()->route('admin.index.participant', ['event_id' => $event_id])
+            ->with('success', 'Peserta berhasil dihapus!');
+    }
+    public function generateQrCode($event_id, $participant_id)
+    {
+        try {
+            $participant = Participant::where('event_id', $event_id)
+                ->where('id', $participant_id)
+                ->firstOrFail();
+
+            $encryptedData = $participant->encrypted_data;
+
+            if (empty($encryptedData)) {
+                return response()->json(['success' => false, 'message' => 'Data terenkripsi tidak ditemukan.'], 404);
+            }
+
+            // Generate QR Code
+            $qrCode = new QrCode($encryptedData);
+            $qrCode->setSize(500);
+
+            // Buat direktori jika belum ada
+            $directoryPath = storage_path("app/public/qrcodes");
+            if (!file_exists($directoryPath)) {
+                mkdir($directoryPath, 0755, true);
+            }
+
+            // Simpan QR Code dalam format PNG
+            $writer = new PngWriter();
+            $result = $writer->write($qrCode);
+
+            // Nama file
+            $fileName = "QRCode_Participant_{$participant_id}.png";
+            $filePath = storage_path("app/public/qrcodes/{$fileName}");
+
+            // Simpan ke storage
+            Storage::disk('public')->put("qrcodes/{$fileName}", $result->getString());
+
+            // Kirim file untuk diunduh
+            return response()->download($filePath)->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            Log::error("Error saat generate QR Code: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Gagal membuat QR Code: ' . $e->getMessage()], 500);
         }
     }
 }
