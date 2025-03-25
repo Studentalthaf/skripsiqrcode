@@ -14,17 +14,15 @@ class CreateEventsTable extends Migration
     public function up()
     {
         Schema::create('events', function (Blueprint $table) {
-            $table->id(); // Kolom id (Primary Key)
-            $table->unsignedBigInteger('user_id'); // Kolom user_id (Foreign Key)
-            $table->string('title'); // Kolom title
-            $table->text('description')->nullable(); // Kolom description, boleh null
-            $table->date('date'); // Kolom date
+            $table->id(); 
+            $table->unsignedBigInteger('user_id');
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->date('date');
             $table->string('signature');
             $table->string('logo')->nullable();
-            $table->string('type_event'); // Kolom type_event
-            $table->timestamps(); // Kolom created_at dan updated_at
-
-            // Menambahkan foreign key untuk user_id yang mengacu ke tabel users
+            $table->string('type_event');
+            $table->timestamps();
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }

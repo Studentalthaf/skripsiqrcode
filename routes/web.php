@@ -75,6 +75,5 @@ Route::middleware(['auth'])->group(function () {
 
     // Rute untuk logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-    Route::post('/decrypt-qr', [DecryptionController::class, 'decryptQr']);
-    
+    Route::post('/decrypt-qr', [DecryptionController::class, 'decryptQr'])->name('decrypt.qr');
 });

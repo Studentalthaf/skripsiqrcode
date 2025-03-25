@@ -30,25 +30,14 @@
                     @csrf
                     <div class="card-body">
                         <div class="form-group">
-                            <label for="nama_peserta">Nama Peserta</label>
-                            <input type="text" class="form-control @error('nama_peserta') is-invalid @enderror" id="nama_peserta" name="nama_peserta" value="{{ old('nama_peserta') }}" required>
-                            @error('nama_peserta')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <label for="email">Email Peserta</label>
-                            <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email') }}" required>
-                            @error('email')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <label for="telepon">Telepon Peserta</label>
-                            <input type="text" class="form-control @error('telepon') is-invalid @enderror" id="telepon" name="telepon" value="{{ old('telepon') }}" required>
-                            @error('telepon')
+                            <label for="user_id">Pilih Peserta</label>
+                            <select class="form-control @error('user_id') is-invalid @enderror" id="user_id" name="user_id" required>
+                                <option value="">-- Pilih Peserta --</option>
+                                @foreach($users as $user)
+                                    <option value="{{ $user->id }}">{{ $user->nama_lengkap }} ({{ $user->email }})</option>
+                                @endforeach
+                            </select>
+                            @error('user_id')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -63,5 +52,6 @@
         </div>
     </section>
 </div>
+
 @include('pointakses.admin.include.sidebar_admin')
 @endsection

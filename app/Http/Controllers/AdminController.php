@@ -178,63 +178,112 @@ class AdminController extends Controller
 
         return view('pointakses.admin.page.admin_index_participant', compact('participants', 'event_id'));
     }
+    // public function create_participant($event_id)
+    // {
+    //     $event = Event::findOrFail($event_id);
+    //     return view('pointakses.admin.page.admin_page_create_participant', compact('event_id'));
+    // }
     public function create_participant($event_id)
     {
         $event = Event::findOrFail($event_id);
-        return view('pointakses.admin.page.admin_page_create_participant', compact('event_id'));
+
+        // Ambil user dengan role 'user' saja
+        $users = User::where('role', 'user')->get();
+
+        return view('pointakses.admin.page.admin_page_create_participant', compact('event_id', 'users'));
     }
+
+    // public function store_participant(Request $request, $event_id)
+    // {
+    //     try {
+    //         $request->validate([
+    //             'nama_peserta' => 'required|string|max:255',
+    //             'email' => 'required|email|max:255',
+    //             'telepon' => 'required|string|max:15',
+    //         ]);
+
+    //         $event = Event::findOrFail($event_id);
+    //         $user = auth()->user(); // Ambil user yang sedang login
+
+    //         $participantData = [
+    //             'name' => $request->nama_peserta,
+    //             'email' => $request->email,
+    //             'phone' => $request->telepon,
+    //             'tanda_tangan' => $event->signature,
+    //             'logo' => $event->logo,
+    //             'nama_lengkap' => $user->nama_lengkap,
+    //             'date' => $event->date,
+    //             'title' => $event->title,
+    //         ];
+
+    //         $encryptionKey = $this->getEncryptionKey($event->encryption_key);
+    //         $encryptedData = $this->encryptData($participantData, $encryptionKey);
+
+    //         $participant = new Participant();
+    //         $participant->user_id = $user->id; // Pastikan user_id diisi
+    //         $participant->event_id = $event_id;
+    //         $participant->encrypted_data = $encryptedData;
+    //         $participant->save();
+
+    //         return redirect()->route('admin.index.participant', ['event_id' => $event_id])
+    //             ->with('success', 'Peserta berhasil ditambahkan!');
+    //     } catch (\Exception $e) {
+    //         return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+    //     }
+    // }
     public function store_participant(Request $request, $event_id)
     {
         try {
             $request->validate([
-                'nama_peserta' => 'required|string|max:255',
-                'email' => 'required|email|max:255',
-                'telepon' => 'required|string|max:15',
+                'user_id' => 'required|exists:users,id', // Pastikan user_id ada di tabel users
             ]);
-    
+
             $event = Event::findOrFail($event_id);
-            $user = auth()->user(); // Ambil user yang sedang login
-    
+            $user = User::findOrFail($request->user_id); // Ambil user berdasarkan ID
+
+            // Data yang akan dienkripsi
             $participantData = [
-                'name' => $request->nama_peserta,
-                'email' => $request->email,
-                'phone' => $request->telepon,
+                'name' => $user->nama_lengkap,
+                'email' => $user->email,
+                'phone' => $user->telepon,
                 'tanda_tangan' => $event->signature,
                 'logo' => $event->logo,
                 'nama_lengkap' => $user->nama_lengkap,
                 'date' => $event->date,
                 'title' => $event->title,
             ];
-    
+
             $encryptionKey = $this->getEncryptionKey($event->encryption_key);
             $encryptedData = $this->encryptData($participantData, $encryptionKey);
-    
+
+            // Simpan ke database
             $participant = new Participant();
-            $participant->user_id = $user->id; // Pastikan user_id diisi
+            $participant->user_id = $user->id;
             $participant->event_id = $event_id;
             $participant->encrypted_data = $encryptedData;
             $participant->save();
-    
+
             return redirect()->route('admin.index.participant', ['event_id' => $event_id])
                 ->with('success', 'Peserta berhasil ditambahkan!');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
+
     private function getEncryptionKey()
     {
         $encryptionKey = env('CHACHA20_SECRET_KEY');
-    
+
         if (!$encryptionKey) {
             throw new \Exception("Kunci enkripsi tidak ditemukan dalam .env!");
         }
-    
+
         $binaryKey = hex2bin($encryptionKey);
-    
+
         if (strlen($binaryKey) !== SODIUM_CRYPTO_AEAD_CHACHA20POLY1305_IETF_KEYBYTES) {
             throw new \Exception("Kunci enkripsi tidak valid! Panjangnya harus 32 byte, ditemukan: " . strlen($binaryKey));
         }
-    
+
         return $binaryKey;
     }
 
@@ -261,28 +310,28 @@ class AdminController extends Controller
         if (strlen($key) !== SODIUM_CRYPTO_AEAD_CHACHA20POLY1305_IETF_KEYBYTES) {
             throw new \Exception('Panjang kunci enkripsi tidak sesuai.');
         }
-    
+
         $decodedData = base64_decode($encryptedData);
         if ($decodedData === false) {
             throw new \Exception("Data terenkripsi tidak valid (bukan format base64)");
         }
-    
+
         $nonce = substr($decodedData, 0, SODIUM_CRYPTO_AEAD_CHACHA20POLY1305_IETF_NPUBBYTES);
         $ciphertext = substr($decodedData, SODIUM_CRYPTO_AEAD_CHACHA20POLY1305_IETF_NPUBBYTES);
-    
+
         $ad = "skripsiku";
-    
+
         $decrypted = sodium_crypto_aead_chacha20poly1305_ietf_decrypt(
             $ciphertext,
             $ad,
             $nonce,
             $key
         );
-    
+
         if ($decrypted === false) {
             throw new \Exception("Dekripsi gagal. Kemungkinan kunci atau nonce tidak cocok.");
         }
-    
+
         return json_decode($decrypted, true);
     }
     public function edit_participant($event_id, $participant_id)
@@ -304,7 +353,7 @@ class AdminController extends Controller
                 'nama_peserta' => 'required|string|max:255',
                 'email' => 'required|email|max:255',
                 'telepon' => 'required|string|max:15',
-                
+
             ]);
 
             // Ambil peserta
@@ -372,46 +421,5 @@ class AdminController extends Controller
 
         return redirect()->route('admin.index.participant', ['event_id' => $event_id])
             ->with('success', 'Peserta berhasil dihapus!');
-    }
-    public function generateQrCode($event_id, $participant_id)
-    {
-        try {
-            $participant = Participant::where('event_id', $event_id)
-                ->where('id', $participant_id)
-                ->firstOrFail();
-
-            $encryptedData = $participant->encrypted_data;
-
-            if (empty($encryptedData)) {
-                return response()->json(['success' => false, 'message' => 'Data terenkripsi tidak ditemukan.'], 404);
-            }
-
-            // Generate QR Code
-            $qrCode = new QrCode($encryptedData);
-            $qrCode->setSize(500);
-
-            // Buat direktori jika belum ada
-            $directoryPath = storage_path("app/public/qrcodes");
-            if (!file_exists($directoryPath)) {
-                mkdir($directoryPath, 0755, true);
-            }
-
-            // Simpan QR Code dalam format PNG
-            $writer = new PngWriter();
-            $result = $writer->write($qrCode);
-
-            // Nama file
-            $fileName = "QRCode_Participant_{$participant_id}.png";
-            $filePath = storage_path("app/public/qrcodes/{$fileName}");
-
-            // Simpan ke storage
-            Storage::disk('public')->put("qrcodes/{$fileName}", $result->getString());
-
-            // Kirim file untuk diunduh
-            return response()->download($filePath)->deleteFileAfterSend(true);
-        } catch (\Exception $e) {
-            Log::error("Error saat generate QR Code: " . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Gagal membuat QR Code: ' . $e->getMessage()], 500);
-        }
     }
 }
