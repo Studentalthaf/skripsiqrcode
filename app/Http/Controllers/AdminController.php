@@ -9,6 +9,9 @@ use App\Models\Participant;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use setasign\Fpdi\Fpdi;  
+use App\Models\Pdf;
+
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 
@@ -36,11 +39,63 @@ class AdminController extends Controller
         return view('pointakses.admin.page.admin_page_create_event');
     }
 
+    public function placeholder($id)
+    {
+        $event = Event::findOrFail($id);
+        return view('pointakses.admin.page.admin_event_placeholder', compact('event'));
+    }
+    
+    public function savePlaceholder(Request $request, $id)
+    {
+        $event = Event::findOrFail($id);
+        $event->placeholders = $request->input('placeholders');
+        $event->save();
+    
+        return redirect()->back()->with('success', 'Placeholder berhasil disimpan.');
+    }
+    
+    
+
+    public function generatePdf($id)
+    {
+        $event = Event::findOrFail($id);
+        $peserta = Participant::first();
+    
+        if (!$peserta) {
+            return back()->with('error', 'Data peserta tidak ditemukan.');
+        }
+    
+        $sourcePdfPath = storage_path('app/public/' . $event->template_pdf);
+        $outputPath = storage_path('app/public/generated_' . $event->id . '.pdf');
+    
+        $pdfWidthPt = 841.92;
+        $pdfHeightPt = 595.5;
+    
+        $fpdi = new Fpdi();
+        $fpdi->AddPage('L', [$pdfWidthPt, $pdfHeightPt]);
+        $fpdi->setSourceFile($sourcePdfPath);
+        $tplIdx = $fpdi->importPage(1);
+        $fpdi->useTemplate($tplIdx, 0, 0, $pdfWidthPt, $pdfHeightPt);
+    
+        $fpdi->SetFont('Arial', 'B', 90);
+        $fpdi->SetTextColor(255, 0, 0);
+    
+        // Menggunakan posisi yang telah disimpan untuk placeholder
+        $x = floatval($event->name_x);
+        $y = $pdfHeightPt - floatval($event->name_y); // Invert y position to match PDF coordinates
+    
+        $fpdi->SetXY($x, $y);
+        $fpdi->Cell(50, 10, utf8_decode($peserta->nama), 0, 1, 'C');
+    
+        $fpdi->Output($outputPath, 'F');
+    
+        return response()->download($outputPath);
+    }
+    
+
+
     public function store(Request $request)
     {
-
-
-        // Validasi data input
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -48,9 +103,9 @@ class AdminController extends Controller
             'type_event' => 'required|string|max:255',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'signature' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'pdf' => 'nullable|mimes:pdf|max:5120', // max 5MB
         ]);
 
-        // Cek apakah pengguna sudah login
         if (Auth::check()) {
             $event = new Event();
             $event->user_id = Auth::id();
@@ -59,16 +114,16 @@ class AdminController extends Controller
             $event->date = $request->date;
             $event->type_event = $request->type_event;
 
-            // Simpan logo jika ada
             if ($request->hasFile('logo')) {
-                $logoPath = $request->file('logo')->store('logos', 'public');
-                $event->logo = $logoPath;
+                $event->logo = $request->file('logo')->store('logos', 'public');
             }
 
-            // Simpan tanda tangan jika ada
             if ($request->hasFile('signature')) {
-                $signaturePath = $request->file('signature')->store('signatures', 'public');
-                $event->signature = $signaturePath;
+                $event->signature = $request->file('signature')->store('signatures', 'public');
+            }
+
+            if ($request->hasFile('template_pdf')) {
+                $event->template_pdf = $request->file('template_pdf')->store('pdfs', 'public');
             }
 
             $event->save();
@@ -78,6 +133,7 @@ class AdminController extends Controller
 
         return redirect()->route('login')->with('error', 'Anda harus login terlebih dahulu.');
     }
+
     public function delete_event($id)
     {
         // Mencari acara berdasarkan ID

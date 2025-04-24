@@ -37,32 +37,36 @@
                                 <th>Tanggal</th>
                                 <th>Type Acara</th>
                                 <th>Deskripsi Acara</th>
+                                <th class="text-center">Atur Placeholder</th>
                                 <th colspan="2" class="text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach ($events as $key => $event)
-                                <tr>
-                                    <td>{{ $key + 1 }}</td>
-                                    <td>{{ $event->title }}</td>
-                                    <td>{{ $event->date }}</td>
-                                    <td>{{ $event->type_event }}</td>
-                                    <td>{{ $event->description }}</td>
-                                    <td class="text-center">
-                                        <a href="{{ route('admin.event.edit', $event->id) }}" class="btn btn-success btn-sm">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </a>
-                                        <a href="{{ route('admin.event.delete', $event->id) }}" class="btn btn-danger btn-sm"
-                                            onclick="return confirm('Yakin ingin menghapus acara ini?')">
-                                            <i class="fas fa-trash-alt"></i> Hapus
-                                        </a>
-                                    </td>
-                                    <td class="text-center">
-                                        <a href="{{ route('admin.index.participant', $event->id) }}" class="btn btn-primary btn-sm">
-                                            Data Peserta
-                                        </a>
-                                    </td>
-                                </tr>
+                            <tr>
+                                <td>{{ $key + 1 }}</td>
+                                <td>{{ $event->title }}</td>
+                                <td>{{ $event->date }}</td>
+                                <td>{{ $event->type_event }}</td>
+                                <td>{{ $event->description }}</td>
+                                <td class="text-center">
+                                <a href="{{ route('admin.event.placeholder', ['id' => $event->id]) }}">Set Placeholder</a>
+                                </td>
+                                <td class="text-center">
+                                    <a href="{{ route('admin.event.edit', $event->id) }}" class="btn btn-success btn-sm">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                    <a href="{{ route('admin.event.delete', $event->id) }}" class="btn btn-danger btn-sm"
+                                        onclick="return confirm('Yakin ingin menghapus acara ini?')">
+                                        <i class="fas fa-trash-alt"></i> Hapus
+                                    </a>
+                                </td>
+                                <td class="text-center">
+                                    <a href="{{ route('admin.index.participant', $event->id) }}" class="btn btn-primary btn-sm">
+                                        Data Peserta
+                                    </a>
+                                </td>
+                            </tr>
                             @endforeach
                         </tbody>
                     </table>

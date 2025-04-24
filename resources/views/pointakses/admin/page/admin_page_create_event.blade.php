@@ -37,6 +37,10 @@
                                 <label for="signature">Tanda Tangan</label>
                                 <input type="file" name="signature" class="form-control-file" id="signature" accept="image/*">
                             </div>
+                            <div class="form-group">
+                                <label for="template_pdf">Template Sertifikat (PDF)</label>
+                                <input type="file" name="template_pdf" class="form-control-file" id="template_pdf" accept="application/pdf">
+                            </div>
                         </div>
                         <div class="card-footer">
                             <button type="submit" class="btn btn-primary">Simpan</button>
@@ -58,6 +62,7 @@
                             <li>Judul acara harus unik.</li>
                             <li>Jenis acara harus sesuai dengan format yang diinginkan.</li>
                             <li>Logo dan tanda tangan harus dalam format gambar.</li>
+                            <li>Template sertifikat harus dalam format PDF.</li>
                         </ul>
                     </div>
                 </div>

@@ -28,17 +28,25 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/admin/event/delete/{id}', [AdminController::class, 'delete_event'])->middleware('userAkses:admin')->name('admin.event.delete');
     Route::get('/admin/event/edit/{id}', [AdminController::class, 'edit_event'])->middleware('userAkses:admin')->name('admin.event.edit');
     Route::put('/admin/event/update/{id}', [AdminController::class, 'update'])->middleware('userAkses:admin')->name('admin.event.update');
+
+    
+    // Untuk menampilkan form placeholder
+    Route::get('/admin/event/placeholder/{id}', [AdminController::class, 'placeholder'])->name('admin.event.placeholder');
+    // Untuk menyimpan data placeholder (harus POST!)
+    Route::post('/admin/pdf/{id}/save-placeholder', [AdminController::class, 'savePlaceholder'])->name('pdf.save');
+
+
     Route::get('/admin/users', [AdminController::class, 'users'])->middleware('userAkses:admin')->name('admin.users');
 
     Route::get('/admin/event/{event_id}/participants', [AdminController::class, 'index_participant'])->middleware('userAkses:admin')->name('admin.index.participant');
     Route::get('admin/event/{event_id}/participants/create', [AdminController::class, 'create_participant'])->middleware('userAkses:admin')->name('admin.create.participant');
-    Route::post('admin/event/{event_id}/participants/store', [AdminController::class, 'store_participant'])->middleware('userAkses:admin')->name('admin.store.participant'); 
+    Route::post('admin/event/{event_id}/participants/store', [AdminController::class, 'store_participant'])->middleware('userAkses:admin')->name('admin.store.participant');
     Route::get('/admin/event/{event_id}/participants/edit/{participant_id}', [AdminController::class, 'edit_participant'])->middleware('userAkses:admin')->name('admin.edit.participant');
     Route::put('/admin/event/{event_id}/participants/update/{participant_id}', [AdminController::class, 'update_participant'])->middleware('userAkses:admin')->name('admin.update.participant');
     Route::get('/admin/event/{event_id}/participant/{participant_id}', [AdminController::class, 'show_participant'])->middleware('userAkses:admin')->name('admin.show.participant');
     Route::delete('/admin/event/{event_id}/participants/destroy/{participant_id}', [AdminController::class, 'destroy_participant'])->middleware('userAkses:admin')->name('admin.destroy.participant');
     Route::get('/admin/qrcode/{event_id}/{participant_id}', [AdminController::class, 'generateQrCode'])->middleware('userAkses:admin')
-    ->name('admin.create.qrcode_participant');
+        ->name('admin.create.qrcode_participant');
 
 
     // Rute untuk halaman dashboard user
@@ -55,7 +63,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Route::get('/user/acara/{event_id}/participants/create', [ParticipantController::class, 'create'])->name('user.participant.create'); // Menampilkan form
     // Route::post('/user/acara/{event_id}/participants', [ParticipantController::class, 'store'])->name('user.participant.store'); // Menyimpan data
-    
+
     // // Rute untuk mengedit peserta
     // Route::get('/user/acara/{event_id}/participants/edit/{participant_id}', [ParticipantController::class, 'edit'])->name('user.participant.edit');
 
