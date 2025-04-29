@@ -22,6 +22,9 @@ class CreateEventsTable extends Migration
             $table->string('signature');
             $table->string('logo')->nullable();
             $table->string('type_event');
+            $table->string('template_pdf')->nullable();
+            $table->integer('name_x')->nullable();
+            $table->integer('name_y')->nullable();
             $table->timestamps();
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });

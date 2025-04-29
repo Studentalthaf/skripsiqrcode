@@ -29,11 +29,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/admin/event/edit/{id}', [AdminController::class, 'edit_event'])->middleware('userAkses:admin')->name('admin.event.edit');
     Route::put('/admin/event/update/{id}', [AdminController::class, 'update'])->middleware('userAkses:admin')->name('admin.event.update');
 
-    
+
     // Untuk menampilkan form placeholder
     Route::get('/admin/event/placeholder/{id}', [AdminController::class, 'placeholder'])->name('admin.event.placeholder');
     // Untuk menyimpan data placeholder (harus POST!)
     Route::post('/admin/pdf/{id}/save-placeholder', [AdminController::class, 'savePlaceholder'])->name('pdf.save');
+    // web.php
+    Route::get('admin/event/{event_id}/participant/{participant_id}/certificate', [AdminController::class, 'viewCertificate'])
+    ->name('admin.view.certificate');
 
 
     Route::get('/admin/users', [AdminController::class, 'users'])->middleware('userAkses:admin')->name('admin.users');

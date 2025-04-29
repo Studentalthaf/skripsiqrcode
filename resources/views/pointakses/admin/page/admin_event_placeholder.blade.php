@@ -3,17 +3,19 @@
 @section('content')
 <div class="content-wrapper iframe-mode" data-widget="iframe" data-loading-screen="750">
     <h1>Halaman Placeholder Event Admin</h1>
+
     @include('pointakses.admin.include.sidebar_admin')
 
-    <div id="pdfContainer" style="position: relative; display: inline-block; border: 1px solid black;">
-        <canvas id="pdfCanvas"></canvas>
+    <div id="pdfContainer" style="position: relative; display: inline-block; border: 1px solid #ccc; background: #f8f8f8;">
+        <canvas id="pdfCanvas" style="display: block;"></canvas>
+        <div id="gridOverlay"></div>
     </div>
 
-    <!-- Perbaiki: tambahkan type="button" agar tidak auto-submit -->
-    <button id="addPlaceholder" type="button">Tambah Placeholder</button>
-    <button id="savePlaceholder" type="button">Simpan Posisi</button>
+    <div class="mt-3">
+        <button id="addPlaceholder" type="button" class="btn btn-primary">Tambah Placeholder</button>
+        <button id="savePlaceholder" type="button" class="btn btn-success">Simpan Posisi</button>
+    </div>
 
-    <!-- Form POST ke route pdf.save -->
     <form id="saveForm" method="POST" action="{{ route('pdf.save', $event->id) }}">
         @csrf
         <input type="hidden" name="placeholders" id="placeholdersInput">
@@ -21,92 +23,130 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
     <script>
-        let placeholders = @json($event->placeholders ? json_decode($event->placeholders, true) : []);
-        let pdfCanvas = document.getElementById('pdfCanvas');
-        let pdfContainer = document.getElementById('pdfContainer');
-        let pdfUrl = "{{ asset('storage/' . $event->template_pdf) }}";
+        document.addEventListener('DOMContentLoaded', function () {
+            const pdfCanvas = document.getElementById('pdfCanvas');
+            const pdfContainer = document.getElementById('pdfContainer');
+            const gridOverlay = document.getElementById('gridOverlay');
+            const placeholdersInput = document.getElementById('placeholdersInput');
+            const pdfUrl = "{{ asset('storage/' . $event->template_pdf) }}";
+            const pdfScale = 1.5;
 
-        // Muat PDF
-        pdfjsLib.getDocument(pdfUrl).promise.then(pdf => {
-            return pdf.getPage(1);
-        }).then(page => {
-            let viewport = page.getViewport({ scale: 1.0 });
+            const placeholders = @json(($event->name_x !== null && $event->name_y !== null) ? [
+                ['x' => $event->name_x, 'y' => $event->name_y]
+            ] : []);
 
-            pdfCanvas.width = viewport.width;
-            pdfCanvas.height = viewport.height;
+            pdfjsLib.getDocument(pdfUrl).promise.then(pdf => pdf.getPage(1)).then(page => {
+                const viewport = page.getViewport({ scale: pdfScale });
+                pdfCanvas.width = viewport.width;
+                pdfCanvas.height = viewport.height;
 
-            let context = pdfCanvas.getContext('2d');
-            return page.render({ canvasContext: context, viewport: viewport }).promise;
-        }).then(() => {
-            pdfContainer.style.width = pdfCanvas.width + "px";
-            pdfContainer.style.height = pdfCanvas.height + "px";
+                const context = pdfCanvas.getContext('2d');
+                return page.render({ canvasContext: context, viewport: viewport }).promise;
+            }).then(() => {
+                pdfContainer.style.width = pdfCanvas.width + 'px';
+                pdfContainer.style.height = pdfCanvas.height + 'px';
 
-            placeholders.forEach(p => createPlaceholder(p.x, pdfCanvas.height - p.y));
-        }).catch(err => {
-            console.error("Error loading PDF: ", err);
-        });
+                gridOverlay.style.width = pdfCanvas.width + 'px';
+                gridOverlay.style.height = pdfCanvas.height + 'px';
 
-        function createPlaceholder(x, y) {
-            let div = document.createElement('div');
-            div.className = 'placeholder';
-            div.style.position = 'absolute';
-            div.style.left = x + 'px';
-            div.style.top = y + 'px';
-            div.style.background = '#f2f2f2';
-            div.style.border = '1px dashed #333';
-            div.style.padding = '4px';
-            div.textContent = 'Nama';
-            pdfContainer.appendChild(div);
-
-            div.onmousedown = function (event) {
-                event.preventDefault();
-                let shiftX = event.clientX - div.getBoundingClientRect().left;
-                let shiftY = event.clientY - div.getBoundingClientRect().top;
-
-                function moveAt(pageX, pageY) {
-                    let newX = pageX - pdfContainer.offsetLeft - shiftX;
-                    let newY = pageY - pdfContainer.offsetTop - shiftY;
-
-                    newX = Math.max(0, Math.min(newX, pdfCanvas.width - div.offsetWidth));
-                    newY = Math.max(0, Math.min(newY, pdfCanvas.height - div.offsetHeight));
-
-                    div.style.left = newX + 'px';
-                    div.style.top = newY + 'px';
-                }
-
-                function onMouseMove(event) {
-                    moveAt(event.pageX, event.pageY);
-                }
-
-                document.addEventListener('mousemove', onMouseMove);
-                div.onmouseup = function () {
-                    document.removeEventListener('mousemove', onMouseMove);
-                    div.onmouseup = null;
-                };
-            };
-
-            div.ondragstart = () => false;
-        }
-
-        // Tambah placeholder
-        document.getElementById('addPlaceholder').addEventListener('click', () => {
-            createPlaceholder(50, 50);
-        });
-
-        // Simpan posisi
-        document.getElementById('savePlaceholder').addEventListener('click', function () {
-            let placeholderData = [];
-            document.querySelectorAll('.placeholder').forEach(div => {
-                let x = parseFloat(div.style.left);
-                let y = pdfCanvas.height - parseFloat(div.style.top);
-                placeholderData.push({ x: x, y: y });
+                placeholders.forEach(p => createPlaceholder(p.x, p.y));
+            }).catch(err => {
+                console.error("Error loading PDF: ", err);
+                alert('Gagal memuat file PDF.');
             });
 
-            console.log("Saving placeholder:", placeholderData);
+            function createPlaceholder(x, y) {
+                const div = document.createElement('div');
+                div.className = 'placeholder';
+                div.style.left = (x * pdfScale) - 50 + 'px';
+                div.style.top = (y * pdfScale) - 10 + 'px';
+                div.textContent = 'Nama Peserta';
+                pdfContainer.appendChild(div);
+                makeDraggable(div);
+            }
 
-            document.getElementById('placeholdersInput').value = JSON.stringify(placeholderData);
-            document.getElementById('saveForm').submit(); // PASTIKAN ini jalan
+            function makeDraggable(element) {
+                let offsetX = 0, offsetY = 0, startX = 0, startY = 0;
+
+                element.onmousedown = function(e) {
+                    e.preventDefault();
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    document.onmouseup = stopDragging;
+                    document.onmousemove = dragging;
+                };
+
+                function dragging(e) {
+                    offsetX = startX - e.clientX;
+                    offsetY = startY - e.clientY;
+                    startX = e.clientX;
+                    startY = e.clientY;
+
+                    let newLeft = element.offsetLeft - offsetX;
+                    let newTop = element.offsetTop - offsetY;
+
+                    // Batasi agar tidak keluar dari kanvas
+                    newLeft = Math.max(0, Math.min(newLeft, pdfCanvas.width - element.offsetWidth));
+                    newTop = Math.max(0, Math.min(newTop, pdfCanvas.height - element.offsetHeight));
+
+                    element.style.left = newLeft + "px";
+                    element.style.top = newTop + "px";
+                }
+
+                function stopDragging() {
+                    document.onmouseup = null;
+                    document.onmousemove = null;
+                }
+            }
+
+            document.getElementById('addPlaceholder').addEventListener('click', () => {
+                createPlaceholder(150 / pdfScale, 150 / pdfScale);
+            });
+
+            document.getElementById('savePlaceholder').addEventListener('click', () => {
+                const placeholders = [];
+                document.querySelectorAll('.placeholder').forEach(p => {
+                    const x = (parseFloat(p.style.left) + (p.offsetWidth / 2)) / pdfScale;
+                    const y = (parseFloat(p.style.top) + (p.offsetHeight / 2)) / pdfScale;
+                    placeholders.push({ x, y });
+                });
+
+                if (placeholders.length === 0) {
+                    alert('Silakan tambahkan placeholder terlebih dahulu.');
+                    return;
+                }
+
+                placeholdersInput.value = JSON.stringify(placeholders);
+                document.getElementById('saveForm').submit();
+            });
         });
     </script>
+
+    <style>
+        #pdfContainer {
+            position: relative;
+        }
+        .placeholder {
+            position: absolute;
+            width: 100px;
+            height: 20px;
+            background: rgba(242, 242, 242, 0.7);
+            border: 1px dashed #333;
+            text-align: center;
+            line-height: 20px;
+            font-size: 12px;
+            cursor: move;
+        }
+        #gridOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            background-image: linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            z-index: 1;
+        }
+    </style>
 </div>
 @endsection
