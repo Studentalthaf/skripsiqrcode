@@ -322,8 +322,10 @@ class AdminController extends Controller
             throw new \Exception('File template sertifikat tidak ditemukan.');
         }
     
+        // Mengatur default koordinat jika kosong
         if (is_null($event->name_x) || is_null($event->name_y)) {
-            throw new \Exception('Koordinat nama peserta belum diatur.');
+            $event->name_x = 50; // default value for X
+            $event->name_y = 100; // default value for Y
         }
     
         // Ambil data terenkripsi peserta
@@ -345,17 +347,17 @@ class AdminController extends Controller
         // Dapatkan ukuran asli halaman pertama
         $templateSize = $pdf->getTemplateSize($templateId);
     
-        // Tambahkan halaman baru sesuai ukuran template
+        // Tambahkan halaman (walaupun tidak membuat halaman baru, halaman template tetap harus ditambahkan terlebih dahulu)
         $pdf->AddPage($templateSize['orientation'], [$templateSize['width'], $templateSize['height']]);
     
         // Gunakan halaman template
         $pdf->useTemplate($templateId);
     
         // Tulis nama peserta di atas template
-        $pdf->SetFont('Helvetica', 'B', 24); // Ubah ukuran/font sesuai kebutuhan
+        $pdf->SetFont('Helvetica', 'B', 48); // Ukuran font lebih besar
         $pdf->SetTextColor(0, 0, 0); // Hitam
-        $pdf->SetXY($event->name_x, $event->name_y);
-        $pdf->Cell(0, 10, $data['name'], 0, 1, 'C');
+        $pdf->SetXY($event->name_x, $event->name_y); // Koordinat untuk nama peserta
+        $pdf->Cell(0, 10, $data['name'], 0, 1, 'C'); // Tulis nama peserta di posisi yang telah ditentukan
     
         // Pastikan folder penyimpanan ada
         $folderPath = storage_path('app/public/participants');
@@ -366,6 +368,10 @@ class AdminController extends Controller
         // Simpan file sertifikat
         $pdf->Output('F', $pdfOutputPath);
     }
+    
+    
+    
+    
     
     
     

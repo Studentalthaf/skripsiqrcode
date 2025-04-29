@@ -35,6 +35,7 @@
                 ['x' => $event->name_x, 'y' => $event->name_y]
             ] : []);
 
+            // Load PDF document and render on canvas
             pdfjsLib.getDocument(pdfUrl).promise.then(pdf => pdf.getPage(1)).then(page => {
                 const viewport = page.getViewport({ scale: pdfScale });
                 pdfCanvas.width = viewport.width;
@@ -49,12 +50,14 @@
                 gridOverlay.style.width = pdfCanvas.width + 'px';
                 gridOverlay.style.height = pdfCanvas.height + 'px';
 
+                // Add initial placeholders if any
                 placeholders.forEach(p => createPlaceholder(p.x, p.y));
             }).catch(err => {
                 console.error("Error loading PDF: ", err);
                 alert('Gagal memuat file PDF.');
             });
 
+            // Function to create draggable placeholders
             function createPlaceholder(x, y) {
                 const div = document.createElement('div');
                 div.className = 'placeholder';
@@ -65,6 +68,7 @@
                 makeDraggable(div);
             }
 
+            // Function to make placeholders draggable
             function makeDraggable(element) {
                 let offsetX = 0, offsetY = 0, startX = 0, startY = 0;
 
@@ -99,10 +103,12 @@
                 }
             }
 
+            // Add a new placeholder when button is clicked
             document.getElementById('addPlaceholder').addEventListener('click', () => {
                 createPlaceholder(150 / pdfScale, 150 / pdfScale);
             });
 
+            // Save the positions of all placeholders
             document.getElementById('savePlaceholder').addEventListener('click', () => {
                 const placeholders = [];
                 document.querySelectorAll('.placeholder').forEach(p => {
