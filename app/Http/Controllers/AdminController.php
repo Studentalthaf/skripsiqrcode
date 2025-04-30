@@ -283,7 +283,9 @@ class AdminController extends Controller
         $data = [
             'name' => $user->nama_lengkap,
             'email' => $user->email,
-            'phone' => $user->no_hp,
+            'phone' => $user->no_tlp,
+            'event_id' => $event->id,
+            'event_title' => $event->title,
             'certificate_path' => $certificatePath, // Menyimpan path sertifikat
         ];
 
