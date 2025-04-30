@@ -48,8 +48,14 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/admin/event/{event_id}/participants/update/{participant_id}', [AdminController::class, 'update_participant'])->middleware('userAkses:admin')->name('admin.update.participant');
     Route::get('/admin/event/{event_id}/participant/{participant_id}', [AdminController::class, 'show_participant'])->middleware('userAkses:admin')->name('admin.show.participant');
     Route::delete('/admin/event/{event_id}/participants/destroy/{participant_id}', [AdminController::class, 'destroy_participant'])->middleware('userAkses:admin')->name('admin.destroy.participant');
-    Route::get('/admin/qrcode/{event_id}/{participant_id}', [AdminController::class, 'generateQrCode'])->middleware('userAkses:admin')
-        ->name('admin.create.qrcode_participant');
+    Route::get('/participant/{id}/qrcode/download', [AdminController::class, 'downloadQRCode'])
+    ->name('participant.qrcode.download')
+    ->middleware('auth');
+
+        // Menampilkan halaman untuk scan QR Code
+        Route::get('/admin/test', [TestController::class, 'index'])->name('admin.test');
+        Route::post('/admin/test/scan', [TestController::class, 'scan'])->name('qr.scan');
+    
 
 
     // Rute untuk halaman dashboard user
@@ -75,16 +81,16 @@ Route::middleware(['auth'])->group(function () {
 
     // // Rute untuk menghapus peserta
 
-    Route::delete('/user/acara/{event_id}/participants/destroy/{participant_id}', [ParticipantController::class, 'destroy'])->name('user.participant.destroy');
+    // Route::delete('/user/acara/{event_id}/participants/destroy/{participant_id}', [ParticipantController::class, 'destroy'])->name('user.participant.destroy');
 
-    Route::get('/user/test', [TestController::class, 'index'])->name('user.test');
+    // Route::get('/user/test', [TestController::class, 'index'])->name('user.test');
 
-    Route::get('/user/acara/{event_id}/participant/{participant_id}', [ParticipantController::class, 'show'])->name('user.participant.show');
+    // Route::get('/user/acara/{event_id}/participant/{participant_id}', [ParticipantController::class, 'show'])->name('user.participant.show');
 
-    Route::get('/participant/{event_id}/{participant_id}/qrcode', [ParticipantController::class, 'generateQRCode'])->name('user.participant.qrcode');
+    // Route::get('/participant/{event_id}/{participant_id}/qrcode', [ParticipantController::class, 'generateQRCode'])->name('user.participant.qrcode');
 
 
     // Rute untuk logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-    Route::post('/decrypt-qr', [DecryptionController::class, 'decryptQr'])->name('decrypt.qr');
+    // Route::post('/decrypt-qr', [DecryptionController::class, 'decryptQr'])->name('decrypt.qr');
 });

@@ -35,7 +35,7 @@
                 </li>
                 <li class="nav-item">
                     <span>
-                        <a href="{{ route('user.test') }}" class="nav-link">
+                        <a href="{{ route('admin.test') }}" class="nav-link">
                             <i class="nav-icon fas fa-vial"></i>
                             <p>Test</p>
                         </a>
@@ -53,7 +53,7 @@
             </ul>
         </nav>
         <!-- /.sidebar-menu -->
-        
+
         <!-- Control Sidebar -->
         <aside class="control-sidebar control-sidebar-dark">
             <!-- Control sidebar content goes here -->

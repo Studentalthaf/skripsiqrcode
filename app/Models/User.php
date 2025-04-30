@@ -33,6 +33,16 @@ class User extends Authenticatable
         'role',
         'alamat',
     ];
+    public function participants()
+    {
+        return $this->hasMany(Participant::class);
+    }
+    public function getIsAdminAttribute()
+    {
+        return $this->role === 'admin';
+    }
+    
+    
 
     /**
      * Atribut yang harus disembunyikan untuk serialisasi.

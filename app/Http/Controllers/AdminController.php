@@ -9,13 +9,15 @@ use App\Models\Participant;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Writer\PngWriter;
+use Endroid\QrCode\QrCode;
+
 use setasign\Fpdi\Fpdi;
 use FPDF;
 use App\Models\Pdf;
 use Illuminate\Support\Str;
 
-use Endroid\QrCode\QrCode;
-use Endroid\QrCode\Writer\PngWriter;
 
 class AdminController extends Controller
 {
@@ -50,33 +52,33 @@ class AdminController extends Controller
     public function savePlaceholder(Request $request, $id)
     {
         $event = Event::findOrFail($id);
-        
+
         $placeholders = $request->input('placeholders');
-        
+
         try {
             $coords = json_decode($placeholders, true);
-    
+
             if (is_array($coords) && count($coords) > 0) {
                 // Validasi setiap koordinat
                 foreach ($coords as $coord) {
                     if (!isset($coord['x']) || !isset($coord['y'])) {
                         return redirect()->route('admin.event')->with('error', 'Format koordinat tidak valid.');
                     }
-    
+
                     if ($coord['x'] < 0 || $coord['y'] < 0) {
                         return redirect()->route('admin.event')->with('error', 'Koordinat tidak boleh negatif.');
                     }
                 }
-    
+
                 // Simpan seluruh koordinat placeholder
                 $event->name_x = (float)$coords[0]['x']; // Jika hanya ingin menyimpan koordinat pertama
                 $event->name_y = (float)$coords[0]['y']; // Jika hanya ingin menyimpan koordinat pertama
-    
+
                 // Jika ingin menyimpan semua placeholder
                 $event->placeholders = json_encode($coords);  // Pastikan ada field placeholders di tabel event
-    
+
                 $event->save();
-    
+
                 return redirect()->route('admin.event')->with('success', 'Koordinat placeholder berhasil disimpan.');
             } else {
                 return redirect()->route('admin.event')->with('warning', 'Tidak ada koordinat ditemukan.');
@@ -85,8 +87,8 @@ class AdminController extends Controller
             return redirect()->route('admin.event')->with('error', 'Gagal memproses data placeholder: ' . $e->getMessage());
         }
     }
-    
-    
+
+
 
 
 
@@ -95,23 +97,23 @@ class AdminController extends Controller
         // Cari data peserta berdasarkan participant_id
         $participant = Participant::findOrFail($participant_id);
         $event = Event::findOrFail($event_id);
-    
+
         // Dekripsi data peserta
         $encryptionKey = $this->getEncryptionKey($event->encryption_key);
         $data = $this->decryptData($participant->encrypted_data, $encryptionKey);
-    
+
         // Tentukan path file sertifikat berdasarkan data yang didekripsi
         $pdfPath = storage_path('app/public/' . $data['certificate_path']);
-    
+
         // Cek apakah file sertifikat ada
         if (!file_exists($pdfPath)) {
             return redirect()->back()->with('error', 'Sertifikat peserta tidak ditemukan.');
         }
-    
+
         // Kembalikan file sertifikat untuk ditampilkan
         return response()->file($pdfPath);
     }
-    
+
 
 
 
@@ -268,15 +270,15 @@ class AdminController extends Controller
         $request->validate([
             'user_id' => 'required|exists:users,id',
         ]);
-    
+
         $event = Event::findOrFail($event_id);
         $user = User::findOrFail($request->user_id);
-    
+
         // Generate path file sertifikat
         $folderPath = 'participants';
         $certificateFilename = uniqid() . '_certificate.pdf'; // Kasih nama unik untuk setiap sertifikat
         $certificatePath = $folderPath . '/' . $certificateFilename;
-    
+
         // Data untuk enkripsi
         $data = [
             'name' => $user->nama_lengkap,
@@ -284,18 +286,18 @@ class AdminController extends Controller
             'phone' => $user->no_hp,
             'certificate_path' => $certificatePath, // Menyimpan path sertifikat
         ];
-    
+
         // Enkripsi data peserta
         $encryptionKey = $this->getEncryptionKey($event->encryption_key);
         $encryptedData = $this->encryptData($data, $encryptionKey);
-    
+
         // Simpan data peserta
         $participant = new Participant();
         $participant->event_id = $event->id;
         $participant->user_id = $user->id;
         $participant->encrypted_data = $encryptedData;
         $participant->save();
-    
+
         // ✨ Generate sertifikat otomatis setelah peserta disimpan
         try {
             $this->generateCertificate($participant);
@@ -303,81 +305,81 @@ class AdminController extends Controller
             return redirect()->route('admin.index.participant', ['event_id' => $event_id])
                 ->with('error', 'Gagal membuat sertifikat: ' . $e->getMessage());
         }
-    
+
         return redirect()->route('admin.index.participant', ['event_id' => $event_id])
             ->with('success', 'Peserta berhasil didaftarkan dan sertifikat berhasil dibuat.');
     }
-    
+
     private function generateCertificate(Participant $participant)
     {
         $event = $participant->event;
         $user = $participant->user;
-    
+
         if (empty($event->template_pdf)) {
             throw new \Exception('Template PDF belum diatur untuk event ini.');
         }
-    
+
         $templatePath = storage_path('app/public/' . $event->template_pdf);
         if (!file_exists($templatePath)) {
             throw new \Exception('File template sertifikat tidak ditemukan.');
         }
-    
+
         // Mengatur default koordinat jika kosong
         if (is_null($event->name_x) || is_null($event->name_y)) {
             $event->name_x = 50; // default value for X
             $event->name_y = 100; // default value for Y
         }
-    
+
         // Ambil data terenkripsi peserta
         $encryptionKey = $this->getEncryptionKey($event->encryption_key);
         $data = $this->decryptData($participant->encrypted_data, $encryptionKey);
-    
+
         // Lokasi output file sertifikat
         $pdfOutputPath = storage_path('app/public/' . $data['certificate_path']);
-    
+
         // Buat objek FPDI
         $pdf = new \setasign\Fpdi\Fpdi();
-    
+
         // Tentukan sumber file template
         $pageCount = $pdf->setSourceFile($templatePath);
-    
+
         // Import halaman pertama
         $templateId = $pdf->importPage(1);
-    
+
         // Dapatkan ukuran asli halaman pertama
         $templateSize = $pdf->getTemplateSize($templateId);
-    
+
         // Tambahkan halaman (walaupun tidak membuat halaman baru, halaman template tetap harus ditambahkan terlebih dahulu)
         $pdf->AddPage($templateSize['orientation'], [$templateSize['width'], $templateSize['height']]);
-    
+
         // Gunakan halaman template
         $pdf->useTemplate($templateId);
-    
+
         // Tulis nama peserta di atas template
         $pdf->SetFont('Helvetica', 'B', 48); // Ukuran font lebih besar
         $pdf->SetTextColor(0, 0, 0); // Hitam
         $pdf->SetXY($event->name_x, $event->name_y); // Koordinat untuk nama peserta
         $pdf->Cell(0, 10, $data['name'], 0, 1, 'C'); // Tulis nama peserta di posisi yang telah ditentukan
-    
+
         // Pastikan folder penyimpanan ada
         $folderPath = storage_path('app/public/participants');
         if (!file_exists($folderPath)) {
             mkdir($folderPath, 0777, true);
         }
-    
+
         // Simpan file sertifikat
         $pdf->Output('F', $pdfOutputPath);
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -393,44 +395,6 @@ class AdminController extends Controller
         return view('pointakses.admin.page.admin_page_create_participant', compact('event_id', 'users'));
     }
 
-    // public function store_participant(Request $request, $event_id)
-    // {
-    //     try {
-    //         $request->validate([
-    //             'user_id' => 'required|exists:users,id', // Pastikan user_id ada di tabel users
-    //         ]);
-
-    //         $event = Event::findOrFail($event_id);
-    //         $user = User::findOrFail($request->user_id); // Ambil user berdasarkan ID
-
-    //         // Data yang akan dienkripsi
-    //         $participantData = [
-    //             'name' => $user->nama_lengkap,
-    //             'email' => $user->email,
-    //             'phone' => $user->telepon,
-    //             'tanda_tangan' => $event->signature,
-    //             'logo' => $event->logo,
-    //             'nama_lengkap' => $user->nama_lengkap,
-    //             'date' => $event->date,
-    //             'title' => $event->title,
-    //         ];
-
-    //         $encryptionKey = $this->getEncryptionKey($event->encryption_key);
-    //         $encryptedData = $this->encryptData($participantData, $encryptionKey);
-
-    //         // Simpan ke database
-    //         $participant = new Participant();
-    //         $participant->user_id = $user->id;
-    //         $participant->event_id = $event_id;
-    //         $participant->encrypted_data = $encryptedData;
-    //         $participant->save();
-
-    //         return redirect()->route('admin.index.participant', ['event_id' => $event_id])
-    //             ->with('success', 'Peserta berhasil ditambahkan!');
-    //     } catch (\Exception $e) {
-    //         return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
-    //     }
-    // }
 
     private function getEncryptionKey()
     {
@@ -496,6 +460,8 @@ class AdminController extends Controller
 
         return json_decode($decrypted, true);
     }
+
+
     public function edit_participant($event_id, $participant_id)
     {
         $event = Event::findOrFail($event_id);
@@ -583,5 +549,50 @@ class AdminController extends Controller
 
         return redirect()->route('admin.index.participant', ['event_id' => $event_id])
             ->with('success', 'Peserta berhasil dihapus!');
+    }
+
+
+    public function downloadQRCode($id)
+    {
+        try {
+            $participant = Participant::findOrFail($id);
+            $user = auth()->user();
+            
+            if (!$user->is_admin && $participant->user_id !== $user->id) {
+                abort(403, 'Anda tidak berhak mengunduh QR code ini.');
+            }
+            
+            $payload = json_encode([
+                'id' => $participant->id,
+                'data' => $participant->encrypted_data,
+                'timestamp' => time() // Tambahkan timestamp untuk validasi
+            ]);
+            
+            // Generate QR code dengan Endroid
+            $result = Builder::create()
+                ->writer(new PngWriter())
+                ->data($payload)
+                ->size(600)
+                ->margin(20) // Tambahkan margin untuk pembacaan yang lebih baik
+              
+                ->build();
+            
+            // Gunakan direktori sementara yang tidak dapat diakses publik
+            $filename = 'qrcode_' . $participant->id . '_' . uniqid() . '.png';
+            $filePath = storage_path('app/temp/' . $filename);
+            
+            // Buat direktori jika belum ada
+            if (!file_exists(storage_path('app/temp'))) {
+                mkdir(storage_path('app/temp'), 0755, true);
+            }
+            
+            file_put_contents($filePath, $result->getString());
+            
+            return response()->download($filePath)->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            // Log error
+            \Log::error('QR Code generation failed: ' . $e->getMessage());
+            return response()->json(['error' => 'Gagal menghasilkan QR Code'], 500);
+        }
     }
 }

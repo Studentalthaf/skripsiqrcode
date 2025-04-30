@@ -92,9 +92,8 @@
                                     </form>
 
                                     @if($participant->decrypted_name !== "Gagal Dekripsi")
-                                    <a href="{{ route('admin.create.qrcode_participant', ['event_id' => $event_id, 'participant_id' => $participant->id]) }}"
-                                        class="btn btn-info btn-sm" title="QR Code">
-                                        <i class="fas fa-qrcode"></i> Download QR
+                                    <a href="{{ route('participant.qrcode.download', $participant->id) }}" class="btn btn-sm btn-success">
+                                        Download QR Code
                                     </a>
                                     <a href="{{ route('admin.view.certificate', ['event_id' => $event_id, 'participant_id' => $participant->id]) }}"
                                         class="btn btn-success btn-sm" title="Lihat Sertifikat">
