@@ -41,8 +41,12 @@ class User extends Authenticatable
     {
         return $this->role === 'admin';
     }
-    
-    
+    public function participatedEvents()
+    {
+        return $this->belongsToMany(Event::class, 'participants');
+    }
+
+
 
     /**
      * Atribut yang harus disembunyikan untuk serialisasi.

@@ -31,13 +31,12 @@
                 </li>
                 <li class="nav-item">
                     <span>
-                        <a href="{{ route('user.acara') }}" class="nav-link">
+                        <a href="{{ route('user.history') }}" class="nav-link">
                             <i class="nav-icon fas fa-columns"></i>
-                            <p>Acara</p>
+                            <p>History</p>
                         </a>
                     </span>
                 </li>
-                <!-- Menu untuk halaman Test -->
                 <li class="nav-item">
                     <span>
                         <a href="{{ route('user.test') }}" class="nav-link">
@@ -46,6 +45,7 @@
                         </a>
                     </span>
                 </li>
+
             </ul>
         </nav>
         <!-- /.sidebar-menu -->

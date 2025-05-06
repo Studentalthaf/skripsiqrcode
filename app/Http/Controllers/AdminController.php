@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+
 use App\Models\Event;
 use App\Models\Participant;
 use Illuminate\Support\Facades\Auth;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\PngWriter;
+use Illuminate\Support\Facades\Hash;
+
 use Endroid\QrCode\QrCode;
 
 use setasign\Fpdi\Fpdi;
@@ -237,6 +240,103 @@ class AdminController extends Controller
         $users = User::all();
         return view('pointakses.admin.page.admin_page_users', compact('users'));
     }
+    public function admin_user_store(Request $request)
+    {
+        // Validasi input
+        $validated = $request->validate([
+            'nama_lengkap' => 'required|string|max:255',
+            'NIM' => 'required|string|max:20|unique:users,NIM',
+            'email' => 'required|email|unique:users,email',
+            'no_tlp' => 'nullable|string|max:15',
+            'unit_kerja' => 'nullable|string|max:255',
+            'alamat' => 'nullable|string',
+            'role' => 'required|in:admin,user,fakultas',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        try {
+            // Membuat user baru
+            $user = new User();
+            $user->nama_lengkap = $validated['nama_lengkap'];
+            $user->NIM = $validated['NIM'];
+            $user->email = $validated['email'];
+            $user->no_tlp = $validated['no_tlp'];
+            $user->unit_kerja = $validated['unit_kerja'];
+            $user->alamat = $validated['alamat'];
+            $user->role = $validated['role'];
+            $user->password = bcrypt($validated['password']);
+            $user->save();
+
+            return redirect()->route('admin.users')->with('success', 'User berhasil ditambahkan!');
+        } catch (\Exception $e) {
+            Log::error('Error saving user: ' . $e->getMessage());
+            return redirect()->route('admin.users')->with('error', 'Gagal menambah user: ' . $e->getMessage());
+        }
+    }
+    public function admin_edit_user($id)
+    {
+        try {
+            $user = User::findOrFail($id);
+            return response()->json($user);
+        } catch (\Exception $e) {
+            Log::error('Error fetching user: ' . $e->getMessage());
+            return response()->json(['error' => 'Gagal mengambil data user'], 500);
+        }
+    }
+
+    public function admin_update_user(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+
+        $validated = $request->validate([
+            'nama_lengkap' => 'required|string|max:255',
+            'NIM' => 'required|string|max:20|unique:users,NIM,' . $user->id,
+            'email' => 'required|email|unique:users,email,' . $user->id,
+            'no_tlp' => 'nullable|string|max:15',
+            'unit_kerja' => 'nullable|string|max:255',
+            'alamat' => 'nullable|string',
+            'role' => 'required|in:admin,user,fakultas',
+            'password' => 'nullable|string|min:8|confirmed',
+        ]);
+
+        try {
+            $user->nama_lengkap = $validated['nama_lengkap'];
+            $user->NIM = $validated['NIM'];
+            $user->email = $validated['email'];
+            $user->no_tlp = $validated['no_tlp'];
+            $user->unit_kerja = $validated['unit_kerja'];
+            $user->alamat = $validated['alamat'];
+            $user->role = $validated['role'];
+            if ($request->filled('password')) {
+                $user->password = bcrypt($validated['password']);
+            }
+            $user->save();
+
+            return redirect()->route('admin.users')->with('success', 'User berhasil diperbarui!');
+        } catch (\Exception $e) {
+            Log::error('Error updating user: ' . $e->getMessage());
+            return redirect()->route('admin.users')->with('error', 'Gagal memperbarui user: ' . $e->getMessage());
+        }
+    }
+    public function admin_destroy_user($id)
+    {
+        try {
+            $user = User::findOrFail($id);
+            $user->delete();
+            return redirect()->route('admin.users')->with('success', 'User berhasil dihapus!');
+        } catch (\Exception $e) {
+            Log::error('Error deleting user: ' . $e->getMessage());
+            return redirect()->route('admin.users')->with('error', 'Gagal menghapus user: ' . $e->getMessage());
+        }
+    }
+
+
+
+    public function edit_user($id)
+    {
+        $user = User::findOrFail($id);
+        return view('pointakses.admin.page.admin_page_edit_user', compact('user'));
+    }
     public function index_participant($event_id)
     {
         $participants = Participant::where('event_id', $event_id)->get();
@@ -373,20 +473,6 @@ class AdminController extends Controller
         $pdf->Output('F', $pdfOutputPath);
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     public function create_participant($event_id)
     {
         $event = Event::findOrFail($event_id);
@@ -396,7 +482,6 @@ class AdminController extends Controller
 
         return view('pointakses.admin.page.admin_page_create_participant', compact('event_id', 'users'));
     }
-
 
     private function getEncryptionKey()
     {
@@ -553,43 +638,41 @@ class AdminController extends Controller
             ->with('success', 'Peserta berhasil dihapus!');
     }
 
-
     public function downloadQRCode($id)
     {
         try {
             $participant = Participant::findOrFail($id);
             $user = auth()->user();
-            
+
             if (!$user->is_admin && $participant->user_id !== $user->id) {
                 abort(403, 'Anda tidak berhak mengunduh QR code ini.');
             }
-            
+
             $payload = json_encode([
                 'id' => $participant->id,
                 'data' => $participant->encrypted_data,
                 'timestamp' => time() // Tambahkan timestamp untuk validasi
             ]);
-            
+
             // Generate QR code dengan Endroid
             $result = Builder::create()
                 ->writer(new PngWriter())
                 ->data($payload)
                 ->size(600)
-                ->margin(20) // Tambahkan margin untuk pembacaan yang lebih baik
-              
+                ->margin(30) // Tambahkan margin untuk pembacaan yang lebih baik
                 ->build();
-            
+
             // Gunakan direktori sementara yang tidak dapat diakses publik
             $filename = 'qrcode_' . $participant->id . '_' . uniqid() . '.png';
             $filePath = storage_path('app/temp/' . $filename);
-            
+
             // Buat direktori jika belum ada
             if (!file_exists(storage_path('app/temp'))) {
                 mkdir(storage_path('app/temp'), 0755, true);
             }
-            
+
             file_put_contents($filePath, $result->getString());
-            
+
             return response()->download($filePath)->deleteFileAfterSend(true);
         } catch (\Exception $e) {
             // Log error

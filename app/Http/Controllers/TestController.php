@@ -24,12 +24,16 @@ class TestController extends Controller
         try {
             // Ambil data dari QR code
             $data = $request->input('qr_data');
-            
+            // $data = json_encode([
+            //     'id' => 4,
+            //     'data' => 'xRkwcdKFIiizb8sZ3sreWsp9lQVFahEMxo6FH/l4BD8hjy90WUxasQaPwgRdHT+fCOFNfaG/55EvvkCa+faOsEkBNy+2LxupFbfHSyHQei2jdvo2Og/onA8fRT6Ta1EfgktY+s2mQrT21GuqUSQWPPjCr00LGYxg01e/6mZtCb8iK0C4vYiD381qytnGrM83NRzdCP4hJyFGTD60r7vBps9v8XaiUl4D1QqVvQL8BA7IlXBna2SdkNzNOU5E6BLhofpS6B+0',
+            //     'timestamp' => 1746512568
+            // ]);
             // Decode dari JSON
             $decoded = json_decode($data, true);
             
             if (!$decoded || !isset($decoded['data']) || !isset($decoded['id'])) {
-                return response()->json(['error' => 'Format QR code tidak valid.'], 400);
+                return response()->json(['error' => 'Format QR code tidak dikenali.'], 400);
             }
             
             // Ambil data terenkripsi dan ID participant
@@ -90,7 +94,7 @@ class TestController extends Controller
             $formattedData = '';
             foreach ($decodedData as $key => $value) {
                 $formattedData .= "<strong>{$key}:</strong> {$value}<br>";
-            }
+            }       
             
             return response()->json([
                 'hasil' => $formattedData,

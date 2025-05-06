@@ -36,10 +36,15 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/admin/pdf/{id}/save-placeholder', [AdminController::class, 'savePlaceholder'])->name('pdf.save');
     // web.php
     Route::get('admin/event/{event_id}/participant/{participant_id}/certificate', [AdminController::class, 'viewCertificate'])
-    ->name('admin.view.certificate');
+        ->name('admin.view.certificate');
 
 
     Route::get('/admin/users', [AdminController::class, 'users'])->middleware('userAkses:admin')->name('admin.users');
+    Route::post('/admin/users', [AdminController::class, 'admin_user_store'])->middleware('userAkses:admin')->name('admin.users.store');
+    Route::get('/admin/users/{id}/edit', [AdminController::class, 'admin_edit_user'])->middleware('userAkses:admin')->name('admin.users.edit');
+    Route::put('/admin/users/{id}', [AdminController::class, 'admin_update_user'])->middleware('userAkses:admin')->name('admin.users.update');
+    Route::delete('/admin/users/{id}', [AdminController::class, 'admin_destroy_user'])->middleware('userAkses:admin')->name('admin.users.destroy');
+
 
     Route::get('/admin/event/{event_id}/participants', [AdminController::class, 'index_participant'])->middleware('userAkses:admin')->name('admin.index.participant');
     Route::get('admin/event/{event_id}/participants/create', [AdminController::class, 'create_participant'])->middleware('userAkses:admin')->name('admin.create.participant');
@@ -49,18 +54,19 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/admin/event/{event_id}/participant/{participant_id}', [AdminController::class, 'show_participant'])->middleware('userAkses:admin')->name('admin.show.participant');
     Route::delete('/admin/event/{event_id}/participants/destroy/{participant_id}', [AdminController::class, 'destroy_participant'])->middleware('userAkses:admin')->name('admin.destroy.participant');
     Route::get('/participant/{id}/qrcode/download', [AdminController::class, 'downloadQRCode'])
-    ->name('participant.qrcode.download')
-    ->middleware('auth');
+        ->name('participant.qrcode.download')
+        ->middleware('auth');
 
-        // Menampilkan halaman untuk scan QR Code
-        Route::get('/admin/test', [TestController::class, 'index'])->name('admin.test');
-        Route::post('/admin/test/scan', [TestController::class, 'scan'])->name('qr.scan');
-    
+
+    Route::get('/admin/test', [TestController::class, 'index'])->name('admin.test');
+    Route::post('/admin/test/scan', [TestController::class, 'scan'])->name('qr.scan');
+
+
 
 
     // Rute untuk halaman dashboard user
     Route::get('/user', [UserController::class, 'index'])->middleware('userAkses:user')->name('user.index');
-    Route::get('/user/acara', [EventController::class, 'acara'])->middleware('userAkses:user')->name('user.acara');
+    Route::get('/user/history_event', [ParticipantController::class, 'history'])->middleware('userAkses:user')->name('user.history');
     Route::get('/user/acara/tambah', [EventController::class, 'tambah'])->middleware('userAkses:user')->name('user.acara.tambah');
     Route::get('/user/acara/hapus/{id}', [EventController::class, 'hapus'])->middleware('userAkses:user')->name('user.acara.hapus');
     Route::post('/user/acara/store', [EventController::class, 'store'])->middleware('userAkses:user')->name('event.store');

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,8 +13,17 @@ class Event extends Model
 
     // Menentukan kolom yang bisa diisi secara mass-assignment
     protected $fillable = [
-        'user_id', 'title', 'description', 'date', 'type_event', 'logo', 'signature',
-        'template_pdf', 'name_x', 'name_y','placeholders'
+        'user_id',
+        'title',
+        'description',
+        'date',
+        'type_event',
+        'logo',
+        'signature',
+        'template_pdf',
+        'name_x',
+        'name_y',
+        'placeholders'
     ];
     protected $casts = [
         'placeholders' => 'array',
@@ -30,5 +40,9 @@ class Event extends Model
     public function participants()
     {
         return $this->hasMany(Participant::class);  // Relasi satu ke banyak
+    }
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'participants');
     }
 }
