@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Monitoring</title>
+    <title>Dashboard Fakultas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-@extends('pointakses.admin.layouts.dashboard')
+@extends('pointakses.fakultas.layouts.dashboard')
 
 @section('content')
 <div class="content-wrapper iframe-mode" data-widget="iframe" data-loading-screen="750">
@@ -16,7 +16,7 @@
         <div class="container-fluid">
             <div class="row mb-2">
                 <div class="col-sm-6">
-                    <h1 class="m-0">Dashboard Monitoring</h1>
+                    <h1 class="m-0">Dashboard Fakultas</h1>
                 </div>
             </div>
         </div>
@@ -25,37 +25,7 @@
     <section class="content">
         <div class="container-fluid">
             <div class="row">
-                <div class="col-lg-3 col-6">
-                    <div class="small-box bg-info">
-                        <div class="inner">
-                            <h3>{{ $userCount ?? '0' }}</h3>
-                            <p>User (Mahasiswa)</p>
-                        </div>
-                        <div class="icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <a href="{{ route('admin.users') }}" class="small-box-footer">
-                            Lihat Detail <i class="fas fa-arrow-circle-right"></i>
-                        </a>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-6">
-                    <div class="small-box bg-success">
-                        <div class="inner">
-                            <h3>{{ $fakultasCount ?? '0' }}</h3>
-                            <p>User (Fakultas)</p>
-                        </div>
-                        <div class="icon">
-                            <i class="fas fa-university"></i>
-                        </div>
-                        <a href="{{ route('admin.users') }}" class="small-box-footer">
-                            Lihat Detail <i class="fas fa-arrow-circle-right"></i>
-                        </a>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-6">
+                <div class="col-lg-6 col-6">
                     <div class="small-box bg-warning">
                         <div class="inner">
                             <h3>{{ $eventCount ?? '0' }}</h3>
@@ -70,7 +40,7 @@
                     </div>
                 </div>
 
-                <div class="col-lg-3 col-6">
+                <div class="col-lg-6 col-6">
                     <div class="small-box bg-danger">
                         <div class="inner">
                             <h3>{{ isset($upcomingEvents) ? $upcomingEvents->count() : '0' }}</h3>
@@ -125,7 +95,7 @@
         </div>
     </section>
 
-    @include('pointakses.admin.include.sidebar_admin')
+    @include('pointakses.fakultas.include.sidebar_fakultas')
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
