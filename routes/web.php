@@ -62,10 +62,15 @@ Route::middleware(['auth'])->group(function () {
 
 
     Route::get('/fakultas', [FakultasController::class, 'index'])->middleware('userAkses:fakultas')->name('fakultas.index');
-
+    Route::get('/fakultas/event', [FakultasController::class, 'event'])->middleware(['auth', 'userAkses:fakultas'])->name('fakultas.event');
+    // Route::get('/fakultas/event/create', [FakultasController::class, 'create_event'])->middleware('userAkses:fakultas')->name('fakultas.create.event');
+    // Route::post('/fakultas/event/store', [FakultasController::class, 'store'])->middleware('userAkses:fakultas')->name('fakultas.event.store');
+    // Route::get('/fakultas/event/edit/{id}', [FakultasController::class, 'edit_event'])->middleware('userAkses:fakultas')->name('fakultas.event.edit');
+    // Route::put('/fakultas/event/update/{id}', [FakultasController::class, 'update'])->middleware('userAkses:fakultas')->name('fakultas.event.update');
+    // Route::get('/fakultas/event/delete/{id}', [FakultasController::class, 'delete_event'])->middleware('userAkses:fakultas')->name('fakultas.event.delete');
 
 
     // Rute untuk logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-    // Route::post('/decrypt-qr', [DecryptionController::class, 'decryptQr'])->name('decrypt.qr');
+
 });

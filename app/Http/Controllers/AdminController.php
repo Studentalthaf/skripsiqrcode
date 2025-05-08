@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Endroid\QrCode\Builder\Builder;
+
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Support\Facades\Hash;
 
@@ -119,163 +120,163 @@ class AdminController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'date' => 'required|date',
-            'type_event' => 'required|string|max:255',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'signature' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'template_pdf' => 'nullable|mimes:pdf|max:5120', // max 5MB
-        ]);
+        try {
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'date' => 'required|date',
+                'type_event' => 'required|string|max:255',
+                'logo' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+                'signature' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+                'template_pdf' => 'required|mimes:pdf|max:5120',
+                'faculty_id' => 'required|exists:users,id,role,fakultas',
+            ]);
 
-        if (Auth::check()) {
-            $event = new Event();
-            $event->user_id = Auth::id();
-            $event->title = $request->title;
-            $event->description = $request->description;
-            $event->date = $request->date;
-            $event->type_event = $request->type_event;
+            Log::info('Validated data', $validated);
 
-            if ($request->hasFile('logo')) {
-                $event->logo = $request->file('logo')->store('logos', 'public');
+            if (Auth::check() && Auth::user()->role === 'admin') {
+                Log::info('User logged in', ['user_id' => Auth::id(), 'role' => Auth::user()->role]);
+
+                $event = new Event();
+                $event->user_id = $request->faculty_id;
+                $event->title = $request->title;
+                $event->description = $request->description;
+                $event->date = $request->date;
+                $event->type_event = $request->type_event;
+
+                if ($request->hasFile('logo')) {
+                    $event->logo = $request->file('logo')->store('logos', 'public');
+                }
+                if ($request->hasFile('signature')) {
+                    $event->signature = $request->file('signature')->store('signatures', 'public');
+                }
+                if ($request->hasFile('template_pdf')) {
+                    $event->template_pdf = $request->file('template_pdf')->store('pdfs', 'public');
+                }
+
+                Log::info('Event data before save', $event->toArray());
+                $event->save();
+                Log::info('Event saved', ['event_id' => $event->id]);
+
+                return redirect()->route('admin.event')->with('success', 'Acara berhasil ditambahkan!');
             }
 
-            if ($request->hasFile('signature')) {
-                $event->signature = $request->file('signature')->store('signatures', 'public');
-            }
-
-            if ($request->hasFile('template_pdf')) {
-                $event->template_pdf = $request->file('template_pdf')->store('pdfs', 'public');
-            }
-
-            $event->save();
-
-            return redirect()->route('admin.event')->with('success', 'Acara berhasil ditambahkan!');
+            Log::warning('Unauthorized store attempt', ['user_id' => Auth::id()]);
+            return redirect()->route('login')->with('error', 'Anda harus login terlebih dahulu.');
+        } catch (\Exception $e) {
+            Log::error('Error saving event: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal menyimpan acara: ' . $e->getMessage());
         }
+    }
 
-        return redirect()->route('login')->with('error', 'Anda harus login terlebih dahulu.');
+    public function edit_event($id)
+    {
+        try {
+            if (Auth::check() && Auth::user()->role === 'admin') {
+                Log::info('Accessing edit form', ['user_id' => Auth::id(), 'event_id' => $id]);
+                $event = Event::findOrFail($id);
+                return view('pointakses.admin.page.admin_page_update_event', compact('event'));
+            }
+            Log::warning('Unauthorized access to edit form', ['user_id' => Auth::id()]);
+            return redirect()->route('login')->with('error', 'Anda harus login terlebih dahulu.');
+        } catch (\Exception $e) {
+            Log::error('Error accessing edit form: ' . $e->getMessage());
+            return redirect()->route('admin.event')->with('error', 'Gagal memuat form edit: ' . $e->getMessage());
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        try {
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'date' => 'required|date',
+                'type_event' => 'required|string|max:255',
+                'logo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'signature' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'template_pdf' => 'nullable|mimes:pdf|max:5120',
+                'faculty_id' => 'required|exists:users,id,role,fakultas',
+            ]);
+
+            Log::info('Validated data for update', $validated);
+
+            if (Auth::check() && Auth::user()->role === 'admin') {
+                Log::info('User logged in', ['user_id' => Auth::id(), 'role' => Auth::user()->role]);
+
+                $event = Event::findOrFail($id);
+
+                $event->user_id = $request->faculty_id;
+                $event->title = $request->title;
+                $event->description = $request->description;
+                $event->date = $request->date;
+                $event->type_event = $request->type_event;
+
+                if ($request->hasFile('logo')) {
+                    if ($event->logo && Storage::disk('public')->exists($event->logo)) {
+                        Storage::disk('public')->delete($event->logo);
+                    }
+                    $event->logo = $request->file('logo')->store('logos', 'public');
+                }
+
+                if ($request->hasFile('signature')) {
+                    if ($event->signature && Storage::disk('public')->exists($event->signature)) {
+                        Storage::disk('public')->delete($event->signature);
+                    }
+                    $event->signature = $request->file('signature')->store('signatures', 'public');
+                }
+
+                if ($request->hasFile('template_pdf')) {
+                    if ($event->template_pdf && Storage::disk('public')->exists($event->template_pdf)) {
+                        Storage::disk('public')->delete($event->template_pdf);
+                    }
+                    $event->template_pdf = $request->file('template_pdf')->store('pdfs', 'public');
+                }
+
+                Log::info('Event data before update', $event->toArray());
+                $event->save();
+                Log::info('Event updated', ['event_id' => $event->id]);
+
+                return redirect()->route('admin.event')->with('success', 'Acara berhasil diupdate!');
+            }
+
+            Log::warning('Unauthorized update attempt', ['user_id' => Auth::id()]);
+            return redirect()->route('login')->with('error', 'Anda harus login terlebih dahulu.');
+        } catch (\Exception $e) {
+            Log::error('Error updating event: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal mengupdate acara: ' . $e->getMessage());
+        }
     }
 
     public function delete_event($id)
     {
-        // Cek apakah user sudah login
-        if (Auth::check()) {
-            // Mencari acara berdasarkan ID
-            $event = Event::findOrFail($id);
-    
-            // Pastikan user yang login adalah pemilik acara
-            if ($event->user_id !== Auth::id()) {
-                return redirect()->route('admin.event')->with('error', 'Anda tidak memiliki izin untuk menghapus acara ini.');
-            }
-    
-            // Hapus logo jika ada
-            if ($event->logo && Storage::disk('public')->exists($event->logo)) {
-                Storage::disk('public')->delete($event->logo);
-            }
-    
-            // Hapus signature jika ada
-            if ($event->signature && Storage::disk('public')->exists($event->signature)) {
-                Storage::disk('public')->delete($event->signature);
-            }
-    
-            // Hapus template PDF jika ada
-            if ($event->template_pdf && Storage::disk('public')->exists($event->template_pdf)) {
-                Storage::disk('public')->delete($event->template_pdf);
-            }
-    
-            // Hapus acara
-            $event->delete();
-    
-            // Redirect kembali ke halaman acara dengan pesan sukses
-            return redirect()->route('admin.event')->with('success', 'Acara berhasil dihapus!');
-        }
-    
-        return redirect()->route('login')->with('error', 'Anda harus login terlebih dahulu.');
-    }
-    
-    public function update(Request $request, $id)
-    {
-        // Validasi input
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'date' => 'required|date',
-            'type_event' => 'required|string|max:255',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'signature' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'template_pdf' => 'nullable|mimes:pdf|max:5120', // max 5MB
-        ]);
-    
-        // Cek apakah user sudah login
-        if (Auth::check()) {
-            // Cari acara berdasarkan ID
-            $event = Event::findOrFail($id);
-    
-            // Pastikan user yang login adalah pemilik acara
-            if ($event->user_id !== Auth::id()) {
-                return redirect()->route('admin.event')->with('error', 'Anda tidak memiliki izin untuk mengedit acara ini.');
-            }
-    
-            // Update data acara
-            $event->title = $request->title;
-            $event->description = $request->description;
-            $event->date = $request->date;
-            $event->type_event = $request->type_event;
-    
-            // Proses penyimpanan logo
-            if ($request->hasFile('logo')) {
-                // Hapus logo lama jika ada
+        try {
+            if (Auth::check() && Auth::user()->role === 'admin') {
+                Log::info('Attempting to delete event', ['user_id' => Auth::id(), 'event_id' => $id]);
+                $event = Event::findOrFail($id);
+
                 if ($event->logo && Storage::disk('public')->exists($event->logo)) {
                     Storage::disk('public')->delete($event->logo);
                 }
-                $event->logo = $request->file('logo')->store('logos', 'public');
-            }
-    
-            // Proses penyimpanan signature
-            if ($request->hasFile('signature')) {
-                // Hapus signature lama jika ada
                 if ($event->signature && Storage::disk('public')->exists($event->signature)) {
                     Storage::disk('public')->delete($event->signature);
                 }
-                $event->signature = $request->file('signature')->store('signatures', 'public');
-            }
-    
-            // Proses penyimpanan template PDF
-            if ($request->hasFile('template_pdf')) {
-                // Hapus template PDF lama jika ada
                 if ($event->template_pdf && Storage::disk('public')->exists($event->template_pdf)) {
                     Storage::disk('public')->delete($event->template_pdf);
                 }
-                $event->template_pdf = $request->file('template_pdf')->store('pdfs', 'public');
+
+                $event->delete();
+                Log::info('Event deleted', ['event_id' => $id]);
+
+                return redirect()->route('admin.event')->with('success', 'Acara berhasil dihapus!');
             }
-    
-            // Simpan perubahan
-            $event->save();
-    
-            return redirect()->route('admin.event')->with('success', 'Acara berhasil diupdate!');
+
+            Log::warning('Unauthorized delete attempt', ['user_id' => Auth::id()]);
+            return redirect()->route('login')->with('error', 'Anda harus login terlebih dahulu.');
+        } catch (\Exception $e) {
+            Log::error('Error deleting event: ' . $e->getMessage());
+            return redirect()->route('admin.event')->with('error', 'Gagal menghapus acara: ' . $e->getMessage());
         }
-    
-        return redirect()->route('login')->with('error', 'Anda harus login terlebih dahulu.');
-    }
-    
-    public function edit_event($id)
-    {
-        // Cek apakah user sudah login
-        if (Auth::check()) {
-            // Cari acara berdasarkan ID
-            $event = Event::findOrFail($id);
-    
-            // Pastikan user yang login adalah pemilik acara
-            if ($event->user_id !== Auth::id()) {
-                return redirect()->route('admin.event')->with('error', 'Anda tidak memiliki izin untuk mengedit acara ini.');
-            }
-    
-            // Kirim data acara ke view form edit
-            return view('pointakses.admin.page.admin_page_update_event', compact('event'));
-        }
-    
-        return redirect()->route('login')->with('error', 'Anda harus login terlebih dahulu.');
     }
 
     public function users()

@@ -19,7 +19,7 @@
             <ul class="nav nav-pills nav-sidebar flex-column" role="menu" data-accordion="false">
                 <li class="nav-item">
                     <span>
-                        <a href="#" class="nav-link">
+                        <a href="{{route('fakultas.index')}}" class="nav-link">
                             <i class="nav-icon fas fa-tachometer-alt"></i>
                             <p>Dashboard</p>
                         </a>
@@ -27,7 +27,7 @@
                 </li>
                 <li class="nav-item">
                     <span>
-                        <a href="#" class="nav-link">
+                        <a href="{{ route('fakultas.event') }}" class="nav-link">
                             <i class="nav-icon fas fa-columns"></i>
                             <p>Acara</p>
                         </a>
