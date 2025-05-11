@@ -1,13 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Monitoring</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
-</head>
-<body>
 @extends('pointakses.admin.layouts.dashboard')
 
 @section('content')
@@ -25,6 +15,7 @@
     <section class="content">
         <div class="container-fluid">
             <div class="row">
+                <!-- Box User -->
                 <div class="col-lg-3 col-6">
                     <div class="small-box bg-info">
                         <div class="inner">
@@ -40,6 +31,7 @@
                     </div>
                 </div>
 
+                <!-- Box Fakultas -->
                 <div class="col-lg-3 col-6">
                     <div class="small-box bg-success">
                         <div class="inner">
@@ -55,6 +47,7 @@
                     </div>
                 </div>
 
+                <!-- Box Total Event -->
                 <div class="col-lg-3 col-6">
                     <div class="small-box bg-warning">
                         <div class="inner">
@@ -70,6 +63,7 @@
                     </div>
                 </div>
 
+                <!-- Box Upcoming Event -->
                 <div class="col-lg-3 col-6">
                     <div class="small-box bg-danger">
                         <div class="inner">
@@ -100,10 +94,11 @@
                                 <table class="table table-bordered table-striped">
                                     <thead>
                                         <tr>
-                                            <th style="width: 10px">#</th>
+                                            <th style="width: 10px">No</th>
                                             <th>Nama Event</th>
                                             <th>Tanggal</th>
                                             <th>Tipe Event</th>
+                                            <th>Pembuat</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -113,6 +108,7 @@
                                                 <td>{{ $event->title }}</td>
                                                 <td>{{ $event->date->format('d M Y') }}</td>
                                                 <td>{{ $event->type_event }}</td>
+                                                <td>{{ $event->user->nama_lengkap ?? '-' }}</td>
                                             </tr>
                                         @endforeach
                                     </tbody>
@@ -127,8 +123,4 @@
 
     @include('pointakses.admin.include.sidebar_admin')
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 @endsection
-</body>
-</html>

@@ -63,14 +63,27 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/fakultas', [FakultasController::class, 'index'])->middleware('userAkses:fakultas')->name('fakultas.index');
     Route::get('/fakultas/event', [FakultasController::class, 'event'])->middleware(['auth', 'userAkses:fakultas'])->name('fakultas.event');
-    // Route::get('/fakultas/event/create', [FakultasController::class, 'create_event'])->middleware('userAkses:fakultas')->name('fakultas.create.event');
-    // Route::post('/fakultas/event/store', [FakultasController::class, 'store'])->middleware('userAkses:fakultas')->name('fakultas.event.store');
-    // Route::get('/fakultas/event/edit/{id}', [FakultasController::class, 'edit_event'])->middleware('userAkses:fakultas')->name('fakultas.event.edit');
-    // Route::put('/fakultas/event/update/{id}', [FakultasController::class, 'update'])->middleware('userAkses:fakultas')->name('fakultas.event.update');
-    // Route::get('/fakultas/event/delete/{id}', [FakultasController::class, 'delete_event'])->middleware('userAkses:fakultas')->name('fakultas.event.delete');
+    Route::get('/fakultas/event/create', [FakultasController::class, 'create_event'])->middleware('userAkses:fakultas')->name('fakultas.create.event');
+    Route::post('/fakultas/event/store', [FakultasController::class, 'store'])->middleware('userAkses:fakultas')->name('fakultas.event.store');
+    Route::get('/fakultas/event/edit/{id}', [FakultasController::class, 'edit_event'])->middleware('userAkses:fakultas')->name('fakultas.event.edit');
+    Route::put('/fakultas/event/update/{id}', [FakultasController::class, 'update'])->middleware('userAkses:fakultas')->name('fakultas.event.update');
+    Route::get('/fakultas/event/delete/{id}', [FakultasController::class, 'delete_event'])->middleware('userAkses:fakultas')->name('fakultas.event.delete');
+    Route::get('/fakultas/event/{event_id}/placeholders/edit', [FakultasController::class, 'edit_placeholder'])
+        ->middleware('userAkses:fakultas')
+        ->name('fakultas.edit.placeholder');
+
+    Route::post('/fakultas/event/{event_id}/placeholders', [FakultasController::class, 'save_placeholder'])
+        ->middleware('userAkses:fakultas')
+        ->name('fakultas.save.placeholder');
+
+    Route::get('fakultas/event/{event_id}/participant/{participant_id}/certificate', [FakultasController::class, 'viewCertificate'])->name('fakultas.view.certificate');
 
 
+    Route::get('/fakultas/event/{event_id}/participants', [FakultasController::class, 'index_participant'])->middleware('userAkses:fakultas')->name('fakultas.index.participant');
+    Route::get('/fakultas/event/{event_id}/participants/create', [FakultasController::class, 'create_participant'])->middleware('userAkses:fakultas')->name('fakultas.create.participant');
+    Route::get('fakultas/event/{event_id}/participants/create', [FakultasController::class, 'create_participant'])->middleware('userAkses:fakultas')->name('fakultas.create.participant');
+    Route::post('fakultas/event/{event_id}/participants/store', [FakultasController::class, 'store_participant'])->middleware('userAkses:fakultas')->name('fakultas.store.participant');
+    Route::delete('/fakultas/event/{event_id}/participants/destroy/{participant_id}', [FakultasController::class, 'destroy_participant'])->middleware('userAkses:fakultas')->name('fakultas.destroy.participant');
     // Rute untuk logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-
 });

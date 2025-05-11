@@ -31,11 +31,17 @@ class AdminController extends Controller
         $userCount = User::where('role', 'user')->count();
         $fakultasCount = User::where('role', 'fakultas')->count();
         $eventCount = Event::count();
-        $upcomingEvents = Event::where('date', '>=', now())
+        
+        $upcomingEvents = Event::with('user') // ini penting
+            ->where('date', '>=', now())
             ->orderBy('date', 'asc')
-            ->get(['title', 'date', 'type_event']);
-        return view('pointakses.admin.index', compact('users', 'userCount', 'fakultasCount', 'eventCount', 'upcomingEvents'));
+            ->get(['id', 'title', 'date', 'type_event', 'user_id']); // pastikan user_id diambil
+    
+        return view('pointakses.admin.index', compact(
+            'users', 'userCount', 'fakultasCount', 'eventCount', 'upcomingEvents'
+        ));
     }
+    
 
     public function event()
     {
@@ -711,7 +717,7 @@ class AdminController extends Controller
             return response()->download($filePath)->deleteFileAfterSend(true);
         } catch (\Exception $e) {
             // Log error
-            \Log::error('QR Code generation failed: ' . $e->getMessage());
+            Log::error('QR Code generation failed: ' . $e->getMessage());
             return response()->json(['error' => 'Gagal menghasilkan QR Code'], 500);
         }
     }

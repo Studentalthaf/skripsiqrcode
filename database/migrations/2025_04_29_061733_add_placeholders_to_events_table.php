@@ -14,8 +14,9 @@ class AddPlaceholdersToEventsTable extends Migration
     public function up()
     {
         Schema::table('events', function (Blueprint $table) {
-            // Tambahkan kolom placeholders untuk menyimpan data JSON placeholder
             $table->json('placeholders')->nullable()->after('template_pdf');
+            // Opsional: Hapus kolom name_x dan name_y jika tidak diperlukan
+            // $table->dropColumn(['name_x', 'name_y']);
         });
     }
 
@@ -28,6 +29,9 @@ class AddPlaceholdersToEventsTable extends Migration
     {
         Schema::table('events', function (Blueprint $table) {
             $table->dropColumn('placeholders');
+            // Opsional: Tambahkan kembali name_x dan name_y jika dihapus
+            // $table->integer('name_x')->nullable();
+            // $table->integer('name_y')->nullable();
         });
     }
 }
