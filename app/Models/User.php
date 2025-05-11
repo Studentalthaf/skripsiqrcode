@@ -33,20 +33,38 @@ class User extends Authenticatable
         'role',
         'alamat',
     ];
+
+    /**
+     * Relasi dengan model Participant
+     */
     public function participants()
     {
         return $this->hasMany(Participant::class);
     }
-    public function getIsAdminAttribute()
-    {
-        return $this->role === 'admin';
-    }
+
+    /**
+     * Relasi dengan model Event melalui pivot participants
+     */
     public function participatedEvents()
     {
         return $this->belongsToMany(Event::class, 'participants');
     }
 
+    /**
+     * Mengecek apakah pengguna adalah admin
+     */
+    public function getIsAdminAttribute()
+    {
+        return $this->role === 'admin';
+    }
 
+    /**
+     * Mengecek apakah pengguna adalah fakultas
+     */
+    public function getIsFakultasAttribute()
+    {
+        return $this->role === 'fakultas';
+    }
 
     /**
      * Atribut yang harus disembunyikan untuk serialisasi.
@@ -64,6 +82,6 @@ class User extends Authenticatable
      * @var array<string, string>
      */
     protected $casts = [
-        'password' => 'hashed', // Hash password secara otomatis
+        'password' => 'hashed',
     ];
 }

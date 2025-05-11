@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use setasign\Fpdi\Fpdi;
 use App\Models\Participant;
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Writer\PngWriter;
+
 
 class FakultasController extends Controller
 {
@@ -426,9 +429,6 @@ class FakultasController extends Controller
         }
     }
 
-    /**
-     * Menyimpan peserta baru untuk acara
-     */
     public function store_participant(Request $request, $event_id)
     {
         try {
@@ -476,12 +476,42 @@ class FakultasController extends Controller
                 ->with('error', 'Gagal menambahkan peserta: ' . $e->getMessage());
         }
     }
-
-
-
     /**
-     * Mendapatkan kunci enkripsi
+     * Menghapus peserta dari acara
      */
+    public function destroy_participant($event_id, $participant_id)
+    {
+        try {
+            // Pastikan acara milik fakultas yang login
+            $event = Event::where('id', $event_id)->where('user_id', Auth::id())->firstOrFail();
+
+            // Ambil peserta
+            $participant = Participant::where('id', $participant_id)->where('event_id', $event_id)->firstOrFail();
+
+            // Dekripsi data untuk mendapatkan certificate_path (opsional)
+            $encryptionKey = $this->getEncryptionKey($event->encryption_key);
+            $decryptedData = $this->decryptData($participant->encrypted_data, $encryptionKey);
+
+            // Hapus file sertifikat jika ada
+            if (isset($decryptedData['certificate_path'])) {
+                $certificatePath = storage_path('app/public/' . $decryptedData['certificate_path']);
+                if (file_exists($certificatePath)) {
+                    unlink($certificatePath);
+                    Log::info('Certificate file deleted: ' . $certificatePath);
+                }
+            }
+
+            // Hapus peserta dari database
+            $participant->delete();
+
+            return redirect()->route('fakultas.index.participant', ['event_id' => $event_id])
+                ->with('success', 'Peserta berhasil dihapus!');
+        } catch (\Exception $e) {
+            Log::error('Error deleting participant: ' . $e->getMessage());
+            return redirect()->route('fakultas.index.participant', ['event_id' => $event_id])
+                ->with('error', 'Gagal menghapus peserta: ' . $e->getMessage());
+        }
+    }
     private function getEncryptionKey($eventKey)
     {
         $encryptionKey = $eventKey ?: env('CHACHA20_SECRET_KEY');
@@ -565,5 +595,65 @@ class FakultasController extends Controller
         }
 
         return $decoded;
+    }
+
+    /**
+     * Menghasilkan dan mengunduh QR code untuk peserta
+     */
+    public function downloadQRCode($event_id, $participant_id)
+    {
+        try {
+            // Ambil pengguna yang login
+            $user = auth()->user();
+
+            // Pastikan acara milik fakultas yang login jika bukan admin
+            $event = Event::where('id', $event_id)
+                ->when(!$user->is_admin, function ($query) use ($user) {
+                    return $query->where('user_id', $user->id);
+                })
+                ->firstOrFail();
+
+            // Ambil peserta
+            $participant = Participant::where('id', $participant_id)
+                ->where('event_id', $event_id)
+                ->firstOrFail();
+
+            // Verifikasi akses: admin atau fakultas yang memiliki acara ini
+            if (!$user->is_admin && !$user->is_fakultas) {
+                abort(403, 'Anda tidak berhak mengunduh QR code ini.');
+            }
+
+            // Buat payload QR code
+            $payload = json_encode([
+                'id' => $participant->id,
+                'data' => $participant->encrypted_data,
+                'timestamp' => time()
+            ]);
+
+            // Generate QR code dengan Endroid
+            $result = Builder::create()
+                ->writer(new PngWriter())
+                ->data($payload)
+                ->size(600)
+                ->margin(30)
+                ->build();
+
+            // Simpan ke direktori sementara
+            $filename = 'qrcode_' . $participant->id . '_' . uniqid() . '.png';
+            $filePath = storage_path('app/temp/' . $filename);
+
+            // Buat direktori jika belum ada
+            if (!file_exists(storage_path('app/temp'))) {
+                mkdir(storage_path('app/temp'), 0755, true);
+            }
+
+            file_put_contents($filePath, $result->getString());
+
+            return response()->download($filePath)->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            Log::error('QR Code generation failed: ' . $e->getMessage());
+            return redirect()->route('fakultas.index.participant', ['event_id' => $event_id])
+                ->with('error', 'Gagal menghasilkan QR Code: ' . $e->getMessage());
+        }
     }
 }

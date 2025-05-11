@@ -81,9 +81,11 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/fakultas/event/{event_id}/participants', [FakultasController::class, 'index_participant'])->middleware('userAkses:fakultas')->name('fakultas.index.participant');
     Route::get('/fakultas/event/{event_id}/participants/create', [FakultasController::class, 'create_participant'])->middleware('userAkses:fakultas')->name('fakultas.create.participant');
-    Route::get('fakultas/event/{event_id}/participants/create', [FakultasController::class, 'create_participant'])->middleware('userAkses:fakultas')->name('fakultas.create.participant');
     Route::post('fakultas/event/{event_id}/participants/store', [FakultasController::class, 'store_participant'])->middleware('userAkses:fakultas')->name('fakultas.store.participant');
-    Route::delete('/fakultas/event/{event_id}/participants/destroy/{participant_id}', [FakultasController::class, 'destroy_participant'])->middleware('userAkses:fakultas')->name('fakultas.destroy.participant');
+    Route::delete('/fakultas/event/{event_id}/participants/{participant_id}', [FakultasController::class, 'destroy_participant'])->middleware('userAkses:fakultas')->name('fakultas.destroy.participant');
+    Route::get('/fakultas/event/{event_id}/participants/{participant_id}/qrcode', [FakultasController::class, 'downloadQRCode'])
+    ->middleware('userAkses:fakultas')
+    ->name('fakultas.download.qrcode');
     // Rute untuk logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });

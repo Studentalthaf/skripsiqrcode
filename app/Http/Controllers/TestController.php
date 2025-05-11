@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use App\Models\Participant;
+use Illuminate\Support\Facades\Log;
 
 class TestController extends Controller
 {
@@ -105,7 +106,7 @@ class TestController extends Controller
             
         } catch (\Exception $e) {
             // Log error untuk debugging
-            \Log::error('QR Scan Error: ' . $e->getMessage());
+            Log::error('QR Scan Error: ' . $e->getMessage());
             return response()->json(['error' => 'Terjadi kesalahan saat memproses QR code: ' . $e->getMessage()], 500);
         }
     }
