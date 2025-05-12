@@ -35,6 +35,14 @@
                 </li>
                 <li class="nav-item">
                     <span>
+                        <a href="{{ route('admin.event.history') }}" class="nav-link">
+                            <i class="nav-icon fas fa-history"></i>
+                            <p>History Event</p>
+                        </a>
+                    </span>
+                </li>
+                <li class="nav-item">
+                    <span>
                         <a href="{{ route('admin.test') }}" class="nav-link">
                             <i class="nav-icon fas fa-vial"></i>
                             <p>Test</p>

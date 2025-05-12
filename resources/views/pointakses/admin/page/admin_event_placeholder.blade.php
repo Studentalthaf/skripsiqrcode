@@ -1,158 +1,126 @@
-@extends('pointakses.admin.layouts.dashboard')
-
-@section('content')
-<div class="content-wrapper iframe-mode" data-widget="iframe" data-loading-screen="750">
-    <h1>Halaman Placeholder Event Admin</h1>
-
-    @include('pointakses.admin.include.sidebar_admin')
-
-    <div id="pdfContainer" style="position: relative; display: inline-block; border: 1px solid #ccc; background: #f8f8f8;">
-        <canvas id="pdfCanvas" style="display: block;"></canvas>
-        <div id="gridOverlay"></div>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Placeholder - {{ $event->title }}</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+    <style>
+        #pdfContainer {
+            position: relative;
+            display: inline-block;
+            border: 1px solid black;
+        }
+        .placeholder {
+            position: absolute;
+            background: rgba(255, 0, 0, 0.7);
+            padding: 5px;
+            cursor: move;
+            border-radius: 3px;
+            user-select: none;
+            font-size: 12px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h2>Edit Placeholder untuk {{ $event->title }}</h2>
+    <div id="pdfContainer">
+        <canvas id="pdfCanvas"></canvas>
     </div>
 
-    <div class="mt-3">
-        <button id="addPlaceholder" type="button" class="btn btn-primary">Tambah Placeholder</button>
-        <button id="savePlaceholder" type="button" class="btn btn-success">Simpan Posisi</button>
-    </div>
+    <button id="addPlaceholder">Tambah Placeholder</button>
+    <button id="savePlaceholder">Simpan Posisi</button>
 
-    <form id="saveForm" method="POST" action="{{ route('pdf.save', $event->id) }}">
+    <form id="saveForm" method="POST" action="{{ route('fakultas.save.placeholder', ['event_id' => $event->id]) }}">
         @csrf
         <input type="hidden" name="placeholders" id="placeholdersInput">
     </form>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const pdfCanvas = document.getElementById('pdfCanvas');
-            const pdfContainer = document.getElementById('pdfContainer');
-            const gridOverlay = document.getElementById('gridOverlay');
-            const placeholdersInput = document.getElementById('placeholdersInput');
-            const pdfUrl = "{{ asset('storage/' . $event->template_pdf) }}";
-            const pdfScale = 1.5;
+        let placeholders = @json($event->placeholders ? json_decode($event->placeholders, true) : []);
+        let pdfCanvas = document.getElementById('pdfCanvas');
+        let pdfContainer = document.getElementById('pdfContainer');
 
-            const placeholders = @json(($event->name_x !== null && $event->name_y !== null) ? [
-                ['x' => $event->name_x, 'y' => $event->name_y]
-            ] : []);
+        let pdfUrl = "{{ Storage::url($event->template_pdf) }}";
 
-            // Load PDF document and render on canvas
-            pdfjsLib.getDocument(pdfUrl).promise.then(pdf => pdf.getPage(1)).then(page => {
-                const viewport = page.getViewport({ scale: pdfScale });
-                pdfCanvas.width = viewport.width;
-                pdfCanvas.height = viewport.height;
+        // Ukuran PDF dalam pt (A4 Landscape)
+        let pdfWidthPt = 841.92;
+        let pdfHeightPt = 595.5;
 
-                const context = pdfCanvas.getContext('2d');
-                return page.render({ canvasContext: context, viewport: viewport }).promise;
-            }).then(() => {
-                pdfContainer.style.width = pdfCanvas.width + 'px';
-                pdfContainer.style.height = pdfCanvas.height + 'px';
+        pdfjsLib.getDocument(pdfUrl).promise.then(pdf => {
+            return pdf.getPage(1);
+        }).then(page => {
+            let viewport = page.getViewport({ scale: 1.0 });
 
-                gridOverlay.style.width = pdfCanvas.width + 'px';
-                gridOverlay.style.height = pdfCanvas.height + 'px';
+            pdfCanvas.width = pdfWidthPt;
+            pdfCanvas.height = pdfHeightPt;
 
-                // Add initial placeholders if any
-                placeholders.forEach(p => createPlaceholder(p.x, p.y));
-            }).catch(err => {
-                console.error("Error loading PDF: ", err);
-                alert('Gagal memuat file PDF.');
-            });
+            let context = pdfCanvas.getContext('2d');
+            return page.render({ canvasContext: context, viewport: viewport }).promise;
+        }).then(() => {
+            pdfContainer.style.width = pdfWidthPt + "px";
+            pdfContainer.style.height = pdfHeightPt + "px";
 
-            // Function to create draggable placeholders
-            function createPlaceholder(x, y) {
-                const div = document.createElement('div');
-                div.className = 'placeholder';
-                div.style.left = (x * pdfScale) - 50 + 'px';
-                div.style.top = (y * pdfScale) - 10 + 'px';
-                div.textContent = 'Nama Peserta';
-                pdfContainer.appendChild(div);
-                makeDraggable(div);
-            }
+            placeholders.forEach(p => createPlaceholder(p.x, pdfHeightPt - p.y));
+        });
 
-            // Function to make placeholders draggable
-            function makeDraggable(element) {
-                let offsetX = 0, offsetY = 0, startX = 0, startY = 0;
+        function createPlaceholder(x, y) {
+            let div = document.createElement('div');
+            div.className = 'placeholder';
+            div.style.left = x + 'px';
+            div.style.top = y + 'px';
+            div.textContent = 'Nama';
+            pdfContainer.appendChild(div);
 
-                element.onmousedown = function(e) {
-                    e.preventDefault();
-                    startX = e.clientX;
-                    startY = e.clientY;
-                    document.onmouseup = stopDragging;
-                    document.onmousemove = dragging;
+            div.onmousedown = function (event) {
+                event.preventDefault();
+                let shiftX = event.clientX - div.getBoundingClientRect().left;
+                let shiftY = event.clientY - div.getBoundingClientRect().top;
+
+                function moveAt(pageX, pageY) {
+                    let newX = pageX - pdfContainer.offsetLeft - shiftX;
+                    let newY = pageY - pdfContainer.offsetTop - shiftY;
+
+                    // Batasi agar placeholder tidak keluar dari batas PDF
+                    newX = Math.max(0, Math.min(newX, pdfWidthPt - div.offsetWidth));
+                    newY = Math.max(0, Math.min(newY, pdfHeightPt - div.offsetHeight));
+
+                    div.style.left = newX + 'px';
+                    div.style.top = newY + 'px';
+                }
+
+                function onMouseMove(event) {
+                    moveAt(event.pageX, event.pageY);
+                }
+
+                document.addEventListener('mousemove', onMouseMove);
+                div.onmouseup = function () {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    div.onmouseup = null;
                 };
+            };
 
-                function dragging(e) {
-                    offsetX = startX - e.clientX;
-                    offsetY = startY - e.clientY;
-                    startX = e.clientX;
-                    startY = e.clientY;
+            div.ondragstart = function () {
+                return false;
+            };
+        }
 
-                    let newLeft = element.offsetLeft - offsetX;
-                    let newTop = element.offsetTop - offsetY;
+        document.getElementById('addPlaceholder').addEventListener('click', function () {
+            createPlaceholder(50, 50);
+        });
 
-                    // Batasi agar tidak keluar dari kanvas
-                    newLeft = Math.max(0, Math.min(newLeft, pdfCanvas.width - element.offsetWidth));
-                    newTop = Math.max(0, Math.min(newTop, pdfCanvas.height - element.offsetHeight));
-
-                    element.style.left = newLeft + "px";
-                    element.style.top = newTop + "px";
-                }
-
-                function stopDragging() {
-                    document.onmouseup = null;
-                    document.onmousemove = null;
-                }
-            }
-
-            // Add a new placeholder when button is clicked
-            document.getElementById('addPlaceholder').addEventListener('click', () => {
-                createPlaceholder(150 / pdfScale, 150 / pdfScale);
+        document.getElementById('savePlaceholder').addEventListener('click', function () {
+            let placeholderData = [];
+            document.querySelectorAll('.placeholder').forEach(div => {
+                let x = parseFloat(div.style.left);
+                let y = pdfHeightPt - parseFloat(div.style.top);
+                placeholderData.push({ x: x, y: y });
             });
 
-            // Save the positions of all placeholders
-            document.getElementById('savePlaceholder').addEventListener('click', () => {
-                const placeholders = [];
-                document.querySelectorAll('.placeholder').forEach(p => {
-                    const x = (parseFloat(p.style.left) + (p.offsetWidth / 2)) / pdfScale;
-                    const y = (parseFloat(p.style.top) + (p.offsetHeight / 2)) / pdfScale;
-                    placeholders.push({ x, y });
-                });
-
-                if (placeholders.length === 0) {
-                    alert('Silakan tambahkan placeholder terlebih dahulu.');
-                    return;
-                }
-
-                placeholdersInput.value = JSON.stringify(placeholders);
-                document.getElementById('saveForm').submit();
-            });
+            document.getElementById('placeholdersInput').value = JSON.stringify(placeholderData);
+            document.getElementById('saveForm').submit();
         });
     </script>
-
-    <style>
-        #pdfContainer {
-            position: relative;
-        }
-        .placeholder {
-            position: absolute;
-            width: 100px;
-            height: 20px;
-            background: rgba(242, 242, 242, 0.7);
-            border: 1px dashed #333;
-            text-align: center;
-            line-height: 20px;
-            font-size: 12px;
-            cursor: move;
-        }
-        #gridOverlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-            background-image: linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
-                              linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px);
-            background-size: 20px 20px;
-            z-index: 1;
-        }
-    </style>
-</div>
-@endsection
+</body>
+</html>

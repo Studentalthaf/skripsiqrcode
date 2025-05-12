@@ -4,49 +4,46 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
-
 use App\Models\Event;
 use App\Models\Participant;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Endroid\QrCode\Builder\Builder;
-
 use Endroid\QrCode\Writer\PngWriter;
-use Illuminate\Support\Facades\Hash;
-
-use Endroid\QrCode\QrCode;
-
+use Carbon\Carbon;
 use setasign\Fpdi\Fpdi;
-use FPDF;
-use App\Models\Pdf;
-use Illuminate\Support\Str;
 
 
 class AdminController extends Controller
 {
-    public function index()
-    {
-        $users = User::where('role', 'admin')->get();
-        $userCount = User::where('role', 'user')->count();
-        $fakultasCount = User::where('role', 'fakultas')->count();
-        $eventCount = Event::count();
-        
-        $upcomingEvents = Event::with('user') // ini penting
-            ->where('date', '>=', now())
-            ->orderBy('date', 'asc')
-            ->get(['id', 'title', 'date', 'type_event', 'user_id']); // pastikan user_id diambil
-    
-        return view('pointakses.admin.index', compact(
-            'users', 'userCount', 'fakultasCount', 'eventCount', 'upcomingEvents'
-        ));
-    }
-    
+   public function index()
+{
+    $users = User::where('role', 'admin')->get();
+    $userCount = User::where('role', 'user')->count();
+    $fakultasCount = User::where('role', 'fakultas')->count();
+    $eventCount = Event::count();
+
+    $upcomingEvents = Event::with('user')
+        ->where('date', '>=', now())
+        ->orderBy('date', 'asc')
+        ->get(['id', 'title', 'date', 'type_event', 'user_id']);
+
+    return view('pointakses.admin.index', compact(
+        'users',
+        'userCount',
+        'fakultasCount', // Ensure this is exactly 'fakultasCount'
+        'eventCount',
+        'upcomingEvents'
+    ));
+}
+
 
     public function event()
     {
         // Mengambil semua event dari database
         $events = Event::all();
+        $events = Event::paginate(10);
 
         return view('pointakses.admin.page.admin_page_event', compact('events'));
     }
@@ -62,67 +59,40 @@ class AdminController extends Controller
         $event = Event::findOrFail($id);
         return view('pointakses.admin.page.admin_event_placeholder', compact('event'));
     }
-
-    public function savePlaceholder(Request $request, $id)
+    public function edit_placeholder($event_id)
     {
-        $event = Event::findOrFail($id);
-
-        $placeholders = $request->input('placeholders');
-
         try {
-            $coords = json_decode($placeholders, true);
+            // Pastikan acara milik fakultas yang login
+            $event = Event::where('id', $event_id)->where('user_id', Auth::id())->firstOrFail();
+            Log::info('Mengakses edit_placeholder untuk event_id: ' . $event_id);
 
-            if (is_array($coords) && count($coords) > 0) {
-                // Validasi setiap koordinat
-                foreach ($coords as $coord) {
-                    if (!isset($coord['x']) || !isset($coord['y'])) {
-                        return redirect()->route('admin.event')->with('error', 'Format koordinat tidak valid.');
-                    }
-
-                    if ($coord['x'] < 0 || $coord['y'] < 0) {
-                        return redirect()->route('admin.event')->with('error', 'Koordinat tidak boleh negatif.');
-                    }
-                }
-
-                // Simpan seluruh koordinat placeholder
-                $event->name_x = (float)$coords[0]['x']; // Jika hanya ingin menyimpan koordinat pertama
-                $event->name_y = (float)$coords[0]['y']; // Jika hanya ingin menyimpan koordinat pertama
-
-                // Jika ingin menyimpan semua placeholder
-                $event->placeholders = json_encode($coords);  // Pastikan ada field placeholders di tabel event
-
-                $event->save();
-
-                return redirect()->route('admin.event')->with('success', 'Koordinat placeholder berhasil disimpan.');
-            } else {
-                return redirect()->route('admin.event')->with('warning', 'Tidak ada koordinat ditemukan.');
+            // Periksa template_pdf
+            if (!$event->template_pdf || !Storage::disk('public')->exists($event->template_pdf)) {
+                Log::info('Template PDF kosong atau tidak ditemukan untuk event_id: ' . $event_id);
+                return redirect()->route('fakultas.event')->with('error', 'Acara ini belum memiliki template PDF atau file tidak ditemukan.');
             }
+
+            // Validasi placeholders
+            if ($event->placeholders) {
+                json_decode($event->placeholders, true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    Log::warning('Data placeholders tidak valid untuk event_id: ' . $event_id);
+                    $event->placeholders = null;
+                }
+            }
+
+            // Jika tidak ada placeholders, gunakan name_x dan name_y sebagai fallback
+            if (!$event->placeholders && $event->name_x !== null && $event->name_y !== null) {
+                $event->placeholders = json_encode([['x' => $event->name_x, 'y' => $event->name_y]]);
+            }
+
+            return view('pointakses.admin.page.admin_page_edit_placeholders', compact('event'));
         } catch (\Exception $e) {
-            return redirect()->route('admin.event')->with('error', 'Gagal memproses data placeholder: ' . $e->getMessage());
+            Log::error('Error loading placeholder edit page: ' . $e->getMessage());
+            return redirect()->route('admin.event')->with('error', 'Gagal memuat halaman pengaturan placeholder: ' . $e->getMessage());
         }
     }
 
-    public function viewCertificate($event_id, $participant_id)
-    {
-        // Cari data peserta berdasarkan participant_id
-        $participant = Participant::findOrFail($participant_id);
-        $event = Event::findOrFail($event_id);
-
-        // Dekripsi data peserta
-        $encryptionKey = $this->getEncryptionKey($event->encryption_key);
-        $data = $this->decryptData($participant->encrypted_data, $encryptionKey);
-
-        // Tentukan path file sertifikat berdasarkan data yang didekripsi
-        $pdfPath = storage_path('app/public/' . $data['certificate_path']);
-
-        // Cek apakah file sertifikat ada
-        if (!file_exists($pdfPath)) {
-            return redirect()->back()->with('error', 'Sertifikat peserta tidak ditemukan.');
-        }
-
-        // Kembalikan file sertifikat untuk ditampilkan
-        return response()->file($pdfPath);
-    }
 
     public function store(Request $request)
     {
@@ -135,7 +105,7 @@ class AdminController extends Controller
                 'logo' => 'required|image|mimes:jpeg,png,jpg|max:2048',
                 'signature' => 'required|image|mimes:jpeg,png,jpg|max:2048',
                 'template_pdf' => 'required|mimes:pdf|max:5120',
-                'faculty_id' => 'required|exists:users,id,role,fakultas',
+                'faculty_id' => 'required|exists:users,id,role,admin',
             ]);
 
             Log::info('Validated data', $validated);
@@ -202,7 +172,7 @@ class AdminController extends Controller
                 'logo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
                 'signature' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
                 'template_pdf' => 'nullable|mimes:pdf|max:5120',
-                'faculty_id' => 'required|exists:users,id,role,fakultas',
+                'faculty_id' => 'required|exists:users,id,role,admin',
             ]);
 
             Log::info('Validated data for update', $validated);
@@ -287,7 +257,7 @@ class AdminController extends Controller
 
     public function users()
     {
-        $users = User::all();
+        $users = User::paginate(10); // Ubah dari all() ke paginate()
         return view('pointakses.admin.page.admin_page_users', compact('users'));
     }
     public function admin_user_store(Request $request)
@@ -300,7 +270,7 @@ class AdminController extends Controller
             'no_tlp' => 'nullable|string|max:15',
             'unit_kerja' => 'nullable|string|max:255',
             'alamat' => 'nullable|string',
-            'role' => 'required|in:admin,user,fakultas',
+            'role' => 'required|in:admin,user,admin',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
@@ -452,67 +422,141 @@ class AdminController extends Controller
         return redirect()->route('admin.index.participant', ['event_id' => $event_id])
             ->with('success', 'Peserta berhasil didaftarkan dan sertifikat berhasil dibuat.');
     }
+    public function save_placeholder(Request $request, $event_id)
+    {
+        try {
+            // Pastikan acara milik fakultas yang login
+            $event = Event::where('id', $event_id)->where('user_id', Auth::id())->firstOrFail();
 
+            $request->validate([
+                'placeholders' => 'required|json',
+            ]);
+
+            $placeholders = json_decode($request->placeholders, true);
+            if (!is_array($placeholders) || empty($placeholders)) {
+                return redirect()->route('fakultas.edit.placeholder', ['event_id' => $event_id])
+                    ->with('error', 'Tidak ada placeholder yang disimpan.');
+            }
+
+            // Simpan placeholders
+            $event->update(['placeholders' => json_encode($placeholders)]);
+
+            // Opsional: Jika masih ingin menyimpan name_x dan name_y untuk kompatibilitas
+            if (!empty($placeholders[0])) {
+                $event->update([
+                    'name_x' => $placeholders[0]['x'],
+                    'name_y' => $placeholders[0]['y'],
+                ]);
+            }
+
+            return redirect()->route('fakultas.index.participant', ['event_id' => $event_id])
+                ->with('success', 'Koordinat placeholder berhasil disimpan.');
+        } catch (\Exception $e) {
+            Log::error('Error saving placeholders: ' . $e->getMessage());
+            return redirect()->route('fakultas.edit.placeholder', ['event_id' => $event_id])
+                ->with('error', 'Gagal menyimpan koordinat placeholder: ' . $e->getMessage());
+        }
+    }
+
+public function viewCertificate($event_id, $participant_id)
+{
+    try {
+        // Ambil acara tanpa memeriksa user_id untuk admin
+        $event = Event::where('id', $event_id)->firstOrFail();
+
+        // Jika bukan admin, batasi akses ke acara milik fakultas yang login
+        if (Auth::check() && Auth::user()->role !== 'admin') {
+            $event = Event::where('id', $event_id)
+                          ->where('user_id', Auth::id())
+                          ->firstOrFail();
+        }
+
+        // Ambil data peserta
+        $participant = Participant::where('id', $participant_id)
+                                  ->where('event_id', $event_id)
+                                  ->firstOrFail();
+
+        // Dekripsi data peserta
+        $encryptionKey = $this->getEncryptionKey($event->encryption_key);
+        $decryptedData = $this->decryptData($participant->encrypted_data, $encryptionKey);
+
+        // Dapatkan path sertifikat
+        $certificatePath = storage_path('app/public/' . $decryptedData['certificate_path']);
+
+        // Periksa apakah file sertifikat ada
+        if (!file_exists($certificatePath)) {
+            Log::error('Certificate file not found: ' . $certificatePath);
+            return redirect()->route('admin.index.participant', ['event_id' => $event_id])
+                ->with('error', 'File sertifikat tidak ditemukan.');
+        }
+
+        // Kembalikan file PDF sebagai respons
+        return response()->file($certificatePath, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="certificate_' . $participant_id . '.pdf"',
+        ]);
+    } catch (\Exception $e) {
+        Log::error('Error viewing certificate: ' . $e->getMessage());
+        return redirect()->route('admin.index.participant', ['event_id' => $event_id])
+            ->with('error', 'Gagal menampilkan sertifikat: ' . $e->getMessage());
+    }
+}
     private function generateCertificate(Participant $participant)
     {
-        $event = $participant->event;
-        $user = $participant->user;
+        try {
+            Log::info('Generating certificate for participant_id: ' . $participant->id);
+            $event = Event::findOrFail($participant->event_id);
+            Log::info('Event found: ' . $event->id . ', template_pdf: ' . $event->template_pdf);
 
-        if (empty($event->template_pdf)) {
-            throw new \Exception('Template PDF belum diatur untuk event ini.');
+            $encryptionKey = $this->getEncryptionKey($event->encryption_key);
+            Log::info('Encryption key: ' . bin2hex($encryptionKey));
+
+            $decryptedData = $this->decryptData($participant->encrypted_data, $encryptionKey);
+            Log::info('Decrypted data: ' . json_encode($decryptedData));
+
+            $sourcePdfPath = storage_path('app/public/' . $event->template_pdf);
+            if (!file_exists($sourcePdfPath)) {
+                Log::error('Source PDF not found: ' . $sourcePdfPath);
+                throw new \Exception('File template PDF tidak ditemukan.');
+            }
+
+            $outputPath = storage_path('app/public/' . $decryptedData['certificate_path']);
+            Log::info('Output path: ' . $outputPath);
+
+            $pdfWidthPt = 841.92;
+            $pdfHeightPt = 595.5;
+
+            $fpdi = new Fpdi();
+            $fpdi->AddPage('L', [$pdfWidthPt, $pdfHeightPt]);
+            $fpdi->setSourceFile($sourcePdfPath);
+            $tplIdx = $fpdi->importPage(1);
+            $fpdi->useTemplate($tplIdx, 0, 0, $pdfWidthPt, $pdfHeightPt);
+
+            $fpdi->SetFont('Arial', 'B', 90);
+            $fpdi->SetTextColor(0, 0, 0);
+
+            $placeholders = $event->placeholders ? json_decode($event->placeholders, true) : [];
+            if (empty($placeholders) && $event->name_x !== null && $event->name_y !== null) {
+                $placeholders = [['x' => $event->name_x, 'y' => $pdfHeightPt - $event->name_y]];
+            }
+            if (empty($placeholders)) {
+                $placeholders = [['x' => 100, 'y' => $pdfHeightPt - 100]];
+            }
+
+            foreach ($placeholders as $p) {
+                $x = floatval($p['x']);
+                $y = $pdfHeightPt - floatval($p['y']);
+                $fpdi->SetXY($x, $y);
+                $fpdi->Cell(50, 10, utf8_decode($decryptedData['name']), 0, 1, 'C');
+            }
+
+            $fpdi->Output($outputPath, 'F');
+        } catch (\Exception $e) {
+            Log::error('Error generating certificate: ' . $e->getMessage());
+            throw $e;
         }
-
-        $templatePath = storage_path('app/public/' . $event->template_pdf);
-        if (!file_exists($templatePath)) {
-            throw new \Exception('File template sertifikat tidak ditemukan.');
-        }
-
-        // Mengatur default koordinat jika kosong
-        if (is_null($event->name_x) || is_null($event->name_y)) {
-            $event->name_x = 50; // default value for X
-            $event->name_y = 100; // default value for Y
-        }
-
-        // Ambil data terenkripsi peserta
-        $encryptionKey = $this->getEncryptionKey($event->encryption_key);
-        $data = $this->decryptData($participant->encrypted_data, $encryptionKey);
-
-        // Lokasi output file sertifikat
-        $pdfOutputPath = storage_path('app/public/' . $data['certificate_path']);
-
-        // Buat objek FPDI
-        $pdf = new \setasign\Fpdi\Fpdi();
-
-        // Tentukan sumber file template
-        $pageCount = $pdf->setSourceFile($templatePath);
-
-        // Import halaman pertama
-        $templateId = $pdf->importPage(1);
-
-        // Dapatkan ukuran asli halaman pertama
-        $templateSize = $pdf->getTemplateSize($templateId);
-
-        // Tambahkan halaman (walaupun tidak membuat halaman baru, halaman template tetap harus ditambahkan terlebih dahulu)
-        $pdf->AddPage($templateSize['orientation'], [$templateSize['width'], $templateSize['height']]);
-
-        // Gunakan halaman template
-        $pdf->useTemplate($templateId);
-
-        // Tulis nama peserta di atas template
-        $pdf->SetFont('Helvetica', 'B', 48); // Ukuran font lebih besar
-        $pdf->SetTextColor(0, 0, 0); // Hitam
-        $pdf->SetXY($event->name_x, $event->name_y); // Koordinat untuk nama peserta
-        $pdf->Cell(0, 10, $data['name'], 0, 1, 'C'); // Tulis nama peserta di posisi yang telah ditentukan
-
-        // Pastikan folder penyimpanan ada
-        $folderPath = storage_path('app/public/participants');
-        if (!file_exists($folderPath)) {
-            mkdir($folderPath, 0777, true);
-        }
-
-        // Simpan file sertifikat
-        $pdf->Output('F', $pdfOutputPath);
     }
+
 
     public function create_participant($event_id)
     {
@@ -720,5 +764,25 @@ class AdminController extends Controller
             Log::error('QR Code generation failed: ' . $e->getMessage());
             return response()->json(['error' => 'Gagal menghasilkan QR Code'], 500);
         }
+    }
+    public function admin_event_history()
+    {
+        $pastEvents = Event::with('user')->where('date', '<', Carbon::today())->orderBy('date', 'desc')->get();
+        $upcomingEvents = Event::with('user')->where('date', '>=', Carbon::today())->orderBy('date', 'asc')->get();
+        return view('pointakses.admin.page.admin_event_history', compact('pastEvents', 'upcomingEvents'));
+    }
+    public function show_event($id)
+    {
+        // Fetch the event with its user and participants (including their user data)
+        $event = Event::with(['user', 'participants.user'])->findOrFail($id);
+
+        // Get participants (automatically filtered to users with role 'user' via Participant::user())
+        $participants = $event->participants;
+
+        // Count participants
+        $participantCount = $participants->count();
+
+        // Return the view with event, participants, and participant count
+        return view('pointakses.admin.page.admin_event_show', compact('event', 'participants', 'participantCount'));
     }
 }

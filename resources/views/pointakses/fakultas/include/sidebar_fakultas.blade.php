@@ -35,6 +35,14 @@
                 </li>
                 <li class="nav-item">
                     <span>
+                        <a href="{{ route('admin.test') }}" class="nav-link">
+                            <i class="nav-icon fas fa-vial"></i>
+                            <p>Test</p>
+                        </a>
+                    </span>
+                </li>
+                <li class="nav-item">
+                    <span>
                         <a href="#" class="nav-link">
                             <i class="nav-icon fas fa-file-alt"></i>
                             <p>Laporan Fakultas</p>

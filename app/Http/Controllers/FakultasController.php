@@ -23,7 +23,8 @@ class FakultasController extends Controller
         $upcomingEvents = Event::where('user_id', Auth::id())
             ->where('date', '>=', now())
             ->orderBy('date', 'asc')
-            ->get(['title', 'date', 'type_event']);
+            ->select('id', 'title', 'date', 'type_event') // Include 'id'
+            ->get();
         return view('pointakses.fakultas.index', compact('users', 'eventCount', 'upcomingEvents'));
     }
     public function event()
@@ -31,6 +32,21 @@ class FakultasController extends Controller
         $events = Event::where('user_id', Auth::id())->get();
         return view('pointakses.fakultas.page.fakultas_page_event', compact('events'));
     }
+    public function show_event($id)
+    {
+        // Fetch the event with its user and participants (including their user data)
+        $event = Event::with(['user', 'participants.user'])->findOrFail($id);
+
+        // Get participants (automatically filtered to users with role 'user' via Participant::user())
+        $participants = $event->participants;
+
+        // Count participants
+        $participantCount = $participants->count();
+
+        // Return the view with event, participants, and participant count
+        return view('pointakses.fakultas.page.fakultas_event_show', compact('event', 'participants', 'participantCount'));
+    }
+
     public function create_event()
     {
         // Menampilkan form tambah acara
@@ -272,12 +288,7 @@ class FakultasController extends Controller
                 ->with('error', 'Gagal menyimpan koordinat placeholder: ' . $e->getMessage());
         }
     }
-    /**
-     * Menghasilkan sertifikat PDF untuk peserta
-     */
-    /**
-     * Menampilkan atau mengunduh sertifikat peserta
-     */
+
     public function viewCertificate($event_id, $participant_id)
     {
         try {
@@ -368,48 +379,44 @@ class FakultasController extends Controller
         }
     }
 
-
-
-
-
-
-
-
-
-
-
-
     public function index_participant($event_id)
     {
         try {
             // Pastikan acara milik fakultas yang login
-            $event = Event::where('id', $event_id)->where('user_id', Auth::id())->firstOrFail();
-            $participants = Participant::where('event_id', $event_id)->get();
-            $user = Auth::user();
+            $event = Event::where('id', $event_id)
+                ->where('user_id', Auth::id())
+                ->firstOrFail();
 
+            // Ambil data peserta dengan pagination
+            $participants = Participant::where('event_id', $event_id)->paginate(10);
+
+            $user = Auth::user();
             $encryptionKey = $this->getEncryptionKey($event->encryption_key);
 
+            // Dekripsi data untuk setiap peserta
             foreach ($participants as $participant) {
                 try {
                     $decryptedData = $this->decryptData($participant->encrypted_data, $encryptionKey);
-                    $participant->decrypted_name = $decryptedData['name'];
-                    $participant->decrypted_email = $decryptedData['email'];
-                    $participant->decrypted_phone = $decryptedData['phone'];
+                    $participant->decrypted_name = $decryptedData['name'] ?? 'Gagal Dekripsi';
+                    $participant->decrypted_email = $decryptedData['email'] ?? '-';
+                    $participant->decrypted_phone = $decryptedData['phone'] ?? '-';
                     $participant->decrypted_logo = $event->logo;
                     $participant->decrypted_signature = $event->signature;
                     $participant->decrypted_nama_lengkap = $user->nama_lengkap;
                     $participant->decrypted_date = $event->date;
                     $participant->decrypted_title = $event->title;
                 } catch (\Exception $e) {
-                    Log::error('Error decrypting participant data: ' . $e->getMessage());
-                    $participant->decrypted_name = "Gagal Dekripsi";
+                    Log::error('Error decrypting participant data for ID ' . $participant->id . ': ' . $e->getMessage());
+                    $participant->decrypted_name = 'Gagal Dekripsi';
+                    $participant->decrypted_email = '-';
+                    $participant->decrypted_phone = '-';
                 }
             }
 
             return view('pointakses.fakultas.page.fakultas_index_participant', compact('participants', 'event_id'));
         } catch (\Exception $e) {
-            Log::error('Error fetching participants: ' . $e->getMessage());
-            return redirect()->route('fakultas.event')->with('error', 'Gagal memuat daftar peserta: ' . $e->getMessage());
+            Log::error('Error fetching participants for event ID ' . $event_id . ': ' . $e->getMessage());
+            return redirect()->route('fakultas.event')->with('error', 'Gagal memuat daftar peserta.');
         }
     }
 
@@ -656,4 +663,104 @@ class FakultasController extends Controller
                 ->with('error', 'Gagal menghasilkan QR Code: ' . $e->getMessage());
         }
     }
+
+    public function index_test_fakultas()
+    {
+        return view('pointakses.fakultas.page.fakultas_page_test');
+    }
+
+    /**
+     * Memproses dan mendekripsi data QR code
+     */
+    public function scan(Request $request)
+    {
+        try {
+            // Ambil data dari QR code
+            $data = $request->input('qr_data');
+            // $data = json_encode([
+            //     'id' => 4,
+            //     'data' => 'xRkwcdKFIiizb8sZ3sreWsp9lQVFahEMxo6FH/l4BD8hjy90WUxasQaPwgRdHT+fCOFNfaG/55EvvkCa+faOsEkBNy+2LxupFbfHSyHQei2jdvo2Og/onA8fRT6Ta1EfgktY+s2mQrT21GuqUSQWPPjCr00LGYxg01e/6mZtCb8iK0C4vYiD381qytnGrM83NRzdCP4hJyFGTD60r7vBps9v8XaiUl4D1QqVvQL8BA7IlXBna2SdkNzNOU5E6BLhofpS6B+0',
+            //     'timestamp' => 1746512568
+            // ]);
+            // Decode dari JSON
+            $decoded = json_decode($data, true);
+            
+            if (!$decoded || !isset($decoded['data']) || !isset($decoded['id'])) {
+                return response()->json(['error' => 'Format QR code tidak dikenali.'], 400);
+            }
+            
+            // Ambil data terenkripsi dan ID participant
+            $encryptedData = $decoded['data'];
+            $participantId = $decoded['id'];
+            
+            // Validasi participant (opsional)
+            // $participant = Participant::find($participantId);
+            // if (!$participant) {
+            //     return response()->json(['error' => 'Peserta tidak ditemukan.'], 404);
+            // }
+            
+            // Base64 decode data terenkripsi
+            $encrypted = base64_decode($encryptedData);
+            
+            if ($encrypted === false) {
+                return response()->json(['error' => 'Data enkripsi tidak valid (base64).'], 400);
+            }
+            
+            // Ambil kunci dari .env (pastikan panjang kunci 32 byte / 64 karakter hex)
+            $key = hex2bin(env('CHACHA20_SECRET_KEY'));
+            if (strlen($key) !== SODIUM_CRYPTO_AEAD_CHACHA20POLY1305_IETF_KEYBYTES) {
+                return response()->json(['error' => 'Kunci enkripsi tidak valid.'], 500);
+            }
+            
+            // Ekstrak komponen dari data terenkripsi
+            if (strlen($encrypted) < SODIUM_CRYPTO_AEAD_CHACHA20POLY1305_IETF_NPUBBYTES) {
+                return response()->json(['error' => 'Data terenkripsi terlalu pendek.'], 400);
+            }
+            
+            // Ekstrak nonce (12 byte) dan ciphertext (termasuk tag autentikasi)
+            $nonce = substr($encrypted, 0, SODIUM_CRYPTO_AEAD_CHACHA20POLY1305_IETF_NPUBBYTES);
+            $ciphertext = substr($encrypted, SODIUM_CRYPTO_AEAD_CHACHA20POLY1305_IETF_NPUBBYTES);
+            
+            // Associated Data harus sama dengan yang digunakan saat enkripsi
+            $ad = "skripsiku";
+            
+            // Dekripsi dengan sodium
+            $decrypted = sodium_crypto_aead_chacha20poly1305_ietf_decrypt(
+                $ciphertext,
+                $ad,
+                $nonce,
+                $key
+            );
+            
+            if ($decrypted === false) {
+                return response()->json(['error' => 'Gagal mendekripsi data. Tag autentikasi tidak valid.'], 400);
+            }
+            
+            // Decode JSON hasil dekripsi
+            $decodedData = json_decode($decrypted, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return response()->json(['error' => 'Data yang didekripsi bukan JSON valid.'], 400);
+            }
+            
+            // Berhasil mendekripsi, kembalikan data
+            // Konversi objek menjadi string yang terformat untuk ditampilkan
+            $formattedData = '';
+            foreach ($decodedData as $key => $value) {
+                $formattedData .= "<strong>{$key}:</strong> {$value}<br>";
+            }       
+            
+            return response()->json([
+                'hasil' => $formattedData,
+                'raw_data' => $decodedData, // Tetap sertakan data mentah jika diperlukan
+                'id' => $participantId,
+                'status' => 'success'
+            ]);
+            
+        } catch (\Exception $e) {
+            // Log error untuk debugging
+            Log::error('QR Scan Error: ' . $e->getMessage());
+            return response()->json(['error' => 'Terjadi kesalahan saat memproses QR code: ' . $e->getMessage()], 500);
+        }
+    }
+
 }
